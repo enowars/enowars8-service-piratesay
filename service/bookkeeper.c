@@ -10,7 +10,7 @@ void change_directory(char *path);
 void cat_file(char *filename);
 void help();
 
-int round = 2; // not safe by itself when everyone has the same seed (use flag from server as seed?)
+int round = 1; // not safe by itself when everyone has the same seed (use flag from server as seed?)
 
 void generate_password(char *password, size_t length)
 {
@@ -30,7 +30,7 @@ void generate_password(char *password, size_t length)
     password[length] = '\0';
 }
 
-int main()
+int command_line_interface()
 {
     char command[256];
     char input[256];
