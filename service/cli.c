@@ -33,8 +33,6 @@ void generate_password(char *password, size_t length)
 
     // Null-terminate the string
     password[length] = '\0';
-
-    printf("Generated password: %s (seed: %d)\n", password, round);
 }
 
 int interact_cli(session_t *session)
