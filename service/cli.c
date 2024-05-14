@@ -92,10 +92,37 @@ int interact_cli(session_t *session)
     }
     else if (strncmp(command, "ls", 255) == 0)
     {
-        DIR *directory = opendir(".");
+        // Extract directory from input, if provided
+        char *directory_name = strchr(input, ' ');
+        char directory_path[1024];
+
+        if (directory_name && *(directory_name + 1))
+        {
+            strcpy(directory_path, directory_name + 1);
+        }
+        else
+        {
+            strcpy(directory_path, ".");
+        }
+
+        char resolved_path[PATH_MAX];
+        if (realpath(directory_path, resolved_path) == NULL)
+        {
+            WRITE_TO_BUFFER(session, "Couldn't resolve directory: %s\n", directory_path);
+            return 0;
+        }
+
+        // Check if the resolved path is within the base directory
+        if (strncmp(session->base_dir, resolved_path, strlen(session->base_dir)) != 0)
+        {
+            WRITE_TO_BUFFER(session, "Operation not permitted; outside base directory\n");
+            return 0;
+        }
+
+        DIR *directory = opendir(resolved_path);
         if (directory == NULL)
         {
-            WRITE_TO_BUFFER(session, "Failed to open directory.\n");
+            WRITE_TO_BUFFER(session, "Unable to list %s\n", resolved_path);
             return 0;
         }
 
