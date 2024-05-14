@@ -3,6 +3,8 @@
     "stdlib.h": "c",
     "socket.h": "c",
     "limits.h": "c",
-    "session.h": "c"
+    "session.h": "c",
+    "cli.h": "c",
+    "pthread.h": "c"
   }
 }

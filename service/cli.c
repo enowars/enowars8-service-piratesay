@@ -1,16 +1,19 @@
 #include "cli.h"
 #include "session.h"
+#include "server.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <dirent.h>
 #include <limits.h>
+#include <sys/socket.h>
 
-// Function Declarations
-int change_directory(char *path, session_t *session);
-void cat_file(char *filename);
-void help();
+// Define the macro for formatting messages into the session buffer
+#define WRITE_TO_BUFFER(session, format, ...)                   \
+    snprintf(session->buffer + strlen(session->buffer),         \
+             sizeof(session->buffer) - strlen(session->buffer), \
+             format, ##__VA_ARGS__)
 
 int round = 1; // not safe by itself when everyone has the same seed (use flag from server as seed?)
 
@@ -30,10 +33,17 @@ void generate_password(char *password, size_t length)
 
     // Null-terminate the string
     password[length] = '\0';
+
+    printf("Generated password: %s (seed: %d)\n", password, round);
 }
 
 int interact_cli(session_t *session)
 {
+
+    // Define the macro for formatting messages into the session buffer
+#define SNPRINTF_TO_BUFFER(format, ...) \
+    snprintf(session->buffer, sizeof(session->buffer), format, ##__VA_ARGS__)
+
     // if buffer is empty, return
     if (strlen(session->buffer) == 0)
     {
@@ -77,7 +87,8 @@ int interact_cli(session_t *session)
         char *filename = strchr(input, ' ');
         if (filename && *(filename + 1))
         {
-            cat_file(filename + 1);
+            cat_file(filename + 1, session);
+            return 0;
         }
         else
         {
@@ -166,6 +177,7 @@ int change_directory(char *path, session_t *session)
     else // we are no longer in the base directory
     {
         chdir(org_path);
+
         snprintf(session->buffer, sizeof(session->buffer), "Failed to change directory to '%s': Not in base directory\n", new_path);
         return 0;
     }
@@ -173,25 +185,29 @@ int change_directory(char *path, session_t *session)
     return 0;
 }
 
-void cat_file(char *filename)
+void cat_file(char *filename, session_t *session)
 {
     // If this is a .scam file, ask for a password to open
     if (strstr(filename, ".scam") != NULL)
     {
-        char correct_password[16] = "AAAAAAAA";
-        char password[256];
+        char correct_password[256] = "AAAAAAAA";
         generate_password(correct_password, 16);
-        printf("You might not be cool enough to view this file. Please enter the top secret scammer's password.\n");
-        printf("Enter password: ");
-        fflush(stdout); // Flush to print prompt before input
-        fgets(password, sizeof(password), stdin);
-        // printf(password);
-        // return;
-        password[strcspn(password, "\n")] = 0; // Trim newline
-        if (strncmp(password, correct_password, 255) != 0)
+        WRITE_TO_BUFFER(session, "You might not be cool enough to view this file. Please enter the top secret scammer's password.\n");
+        WRITE_TO_BUFFER(session, "Enter password: ");
+        send(session->sock, session->buffer, strlen(session->buffer), 0);
+        memset(session->buffer, 0, sizeof(session->buffer));
+        int read_size;
+        char password_input[256];
+        // printf("This is before: %s\n", correct_password);
+        read_size = recv(session->sock, password_input, 256, 0);
+        // Null-terminate and remove newline
+        password_input[read_size] = '\0';
+        trim_whitespace(password_input);
+        fflush(stdout);
+        if (strncmp(password_input, correct_password, 255) != 0)
         {
-            printf(password);
-            printf(" is incorrect!");
+            WRITE_TO_BUFFER(session, password_input);
+            WRITE_TO_BUFFER(session, " is incorrect!");
             return;
         }
     }
@@ -199,24 +215,24 @@ void cat_file(char *filename)
     FILE *file = fopen(filename, "r");
     if (file == NULL)
     {
-        printf("Cannot open file: %s\n", filename);
-        return;
+        WRITE_TO_BUFFER(session, "Cannot open file: %s\n", filename);
     }
 
     char line[256];
     while (fgets(line, sizeof(line), file))
     {
-        printf("%s", line); // Intentionally omitting format string to introduce vulnerability
+        WRITE_TO_BUFFER(session, "%s", line);
     }
+
     fclose(file);
 }
 
 void help(session_t *session)
 {
-    strcat(session->buffer, "Available commands:\n");
-    strcat(session->buffer, "  ls - List files in the current directory\n");
-    strcat(session->buffer, "  cd [directory] - Change current working directory\n");
-    strcat(session->buffer, "  cat [file] - Display content of a text file\n");
-    strcat(session->buffer, "  help - Display this help message\n");
-    strcat(session->buffer, "  exit - Exit the program\n");
+    WRITE_TO_BUFFER(session, "Available commands:\n");
+    WRITE_TO_BUFFER(session, "  ls - List files in the current directory\n");
+    WRITE_TO_BUFFER(session, "  cd [directory] - Change current working directory\n");
+    WRITE_TO_BUFFER(session, "  cat [file] - Display content of a text file\n");
+    WRITE_TO_BUFFER(session, "  help - Display this help message\n");
+    WRITE_TO_BUFFER(session, "  exit - Exit the program\n");
 }
