@@ -130,11 +130,12 @@ int interact_cli(session_t *session)
 
 int change_directory(char *path, session_t *session)
 {
+    printf("Received: %s\n", path); // Debugging (remove later
     // Store original path to restore later if needed
     char org_path[1024];
     if (getcwd(org_path, sizeof(org_path)) == NULL)
     {
-        snprintf(session->buffer, sizeof(session->buffer), "Error getting current directory: %s\n", path);
+        snprintf(session->buffer, sizeof(session->buffer), "Error getting old directory: %s\n", path);
         return 0;
     }
 
@@ -142,20 +143,21 @@ int change_directory(char *path, session_t *session)
     if (chdir(path) != 0)
     {
         // On failure, report the error
-        snprintf(session->buffer, sizeof(session->buffer), "Failed to change directory to '%s': %s\n", path);
+        snprintf(session->buffer, sizeof(session->buffer), "Failed to change directory to '%s'\n", path);
+        printf("Received: %s\n", path); // Debugging (remove later
         return 0;
     }
     // store the new directory
     char new_path[1024];
     if (getcwd(new_path, sizeof(new_path)) == NULL)
     {
-        snprintf(session->buffer, sizeof(session->buffer), "Error getting current directory: %s\n", path);
+        snprintf(session->buffer, sizeof(session->buffer), "Error getting new directory: %s\n", path);
         return 0;
     }
 
     // Successfully changed directory, now store the new dir in current_dir if it still includes base_dir
     // then return to original to maintain state
-    if (strncmp(session->base_dir, new_path, sizeof(new_path)) == 0)
+    if (strncmp(session->base_dir, new_path, strlen(session->base_dir)) == 0)
     {
         strcpy(session->current_dir, new_path);
         snprintf(session->buffer, sizeof(session->buffer), "Changed directory to '%s'\n", new_path);
