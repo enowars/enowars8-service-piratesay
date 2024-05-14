@@ -58,7 +58,7 @@ int interact_cli(session_t *session)
     // chdir to this session's current directory
     if (chdir(session->current_dir) != 0)
     {
-        strcat(session->buffer, "Failed to use session's current directory\n");
+        WRITE_TO_BUFFER(session, "Failed to use session's current directory\n");
         return 0;
     }
 
@@ -75,7 +75,7 @@ int interact_cli(session_t *session)
         }
         else
         {
-            strcat(session->buffer, "No directory specified.\n");
+            WRITE_TO_BUFFER(session, "No directory specified.\n");
             return 0;
         }
     }
@@ -90,7 +90,7 @@ int interact_cli(session_t *session)
         }
         else
         {
-            strcat(session->buffer, "No file specified.\n");
+            WRITE_TO_BUFFER(session, "No file specified.\n");
             return 0;
         }
     }
@@ -99,7 +99,7 @@ int interact_cli(session_t *session)
         DIR *directory = opendir(".");
         if (directory == NULL)
         {
-            strcat(session->buffer, "Failed to open directory.\n");
+            WRITE_TO_BUFFER(session, "Failed to open directory.\n");
             return 0;
         }
 
@@ -131,7 +131,7 @@ int interact_cli(session_t *session)
     }
     else
     {
-        strcat(session->buffer, "Unknown command.\n");
+        WRITE_TO_BUFFER(session, "Unknown command.\n");
     }
 
     return 0;
@@ -144,7 +144,7 @@ int change_directory(char *path, session_t *session)
     char org_path[1024];
     if (getcwd(org_path, sizeof(org_path)) == NULL)
     {
-        snprintf(session->buffer, sizeof(session->buffer), "Error getting old directory: %s\n", path);
+        WRITE_TO_BUFFER(session, "Error getting old directory: %s\n", path);
         return 0;
     }
 
@@ -152,7 +152,7 @@ int change_directory(char *path, session_t *session)
     if (chdir(path) != 0)
     {
         // On failure, report the error
-        snprintf(session->buffer, sizeof(session->buffer), "Failed to change directory to '%s'\n", path);
+        WRITE_TO_BUFFER(session, "Failed to change directory to '%s'\n", path);
         printf("Received: %s\n", path); // Debugging (remove later
         return 0;
     }
@@ -160,7 +160,7 @@ int change_directory(char *path, session_t *session)
     char new_path[1024];
     if (getcwd(new_path, sizeof(new_path)) == NULL)
     {
-        snprintf(session->buffer, sizeof(session->buffer), "Error getting new directory: %s\n", path);
+        WRITE_TO_BUFFER(session, "Error getting new directory: %s\n", path);
         return 0;
     }
 
@@ -169,14 +169,14 @@ int change_directory(char *path, session_t *session)
     if (strncmp(session->base_dir, new_path, strlen(session->base_dir)) == 0)
     {
         strcpy(session->current_dir, new_path);
-        snprintf(session->buffer, sizeof(session->buffer), "Changed directory to '%s'\n", new_path);
+        WRITE_TO_BUFFER(session, "Changed directory to '%s'\n", new_path);
         chdir(org_path);
     }
     else // we are no longer in the base directory
     {
         chdir(org_path);
 
-        snprintf(session->buffer, sizeof(session->buffer), "Failed to change directory to '%s': Not in base directory\n", new_path);
+        WRITE_TO_BUFFER(session, "Failed to change directory to '%s': Not in base directory\n", new_path);
         return 0;
     }
 
