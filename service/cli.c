@@ -38,10 +38,6 @@ void generate_password(char *password, size_t length)
 int interact_cli(session_t *session)
 {
 
-    // Define the macro for formatting messages into the session buffer
-#define SNPRINTF_TO_BUFFER(format, ...) \
-    snprintf(session->buffer, sizeof(session->buffer), format, ##__VA_ARGS__)
-
     // if buffer is empty, return
     if (strlen(session->buffer) == 0)
     {
@@ -110,7 +106,7 @@ int interact_cli(session_t *session)
             int remaining_buffer_size = sizeof(session->buffer) - strlen(session->buffer) - 1;
             if (remaining_buffer_size > 0)
             {
-                snprintf(session->buffer + strlen(session->buffer), remaining_buffer_size, "%s\n", entry->d_name);
+                WRITE_TO_BUFFER(session, "%s\n", entry->d_name);
             }
             else
             {
@@ -139,7 +135,6 @@ int interact_cli(session_t *session)
 
 int change_directory(char *path, session_t *session)
 {
-    printf("Received: %s\n", path); // Debugging (remove later
     // Store original path to restore later if needed
     char org_path[1024];
     if (getcwd(org_path, sizeof(org_path)) == NULL)
@@ -153,7 +148,6 @@ int change_directory(char *path, session_t *session)
     {
         // On failure, report the error
         WRITE_TO_BUFFER(session, "Failed to change directory to '%s'\n", path);
-        printf("Received: %s\n", path); // Debugging (remove later
         return 0;
     }
     // store the new directory

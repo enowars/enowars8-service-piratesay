@@ -88,7 +88,7 @@ void *client_session(void *socket_desc)
             break;
         }
 
-        // Echo back the received message
+        // Echo back the output from interact_cli now stored in session.buffer
         send(sock, session.buffer, strlen(session.buffer), 0);
 
         // Prepare and send the "In dir" message
