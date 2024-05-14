@@ -1,0 +1,220 @@
+#include "cli.h"
+#include "session.h"
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <dirent.h>
+#include <limits.h>
+
+// Function Declarations
+int change_directory(char *path, session_t *session);
+void cat_file(char *filename);
+void help();
+
+int round = 1; // not safe by itself when everyone has the same seed (use flag from server as seed?)
+
+void generate_password(char *password, size_t length)
+{
+    // Define the characters that we want to use in our password
+    char characters[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
+
+    // Initialize the random number generator
+    srand(round);
+
+    // Generate a random password
+    for (size_t i = 0; i < length; i++)
+    {
+        password[i] = characters[rand() % (sizeof(characters) - 1)];
+    }
+
+    // Null-terminate the string
+    password[length] = '\0';
+}
+
+int interact_cli(session_t *session)
+{
+    // if buffer is empty, return
+    if (strlen(session->buffer) == 0)
+    {
+        return 0;
+    }
+
+    // copy buffer to input
+    char input[1024];
+    strcpy(input, session->buffer);
+    // clearing buffer to use as output
+    memset(session->buffer, 0, sizeof(session->buffer));
+
+    char command[1024];
+    // chdir to this session's current directory
+    if (chdir(session->current_dir) != 0)
+    {
+        strcat(session->buffer, "Failed to use session's current directory\n");
+        return 0;
+    }
+
+    // Parse the first word as the command
+    sscanf(input, "%255s", command);
+
+    if (strncmp(command, "cd", 255) == 0)
+    {
+        // Extract directory from input
+        char *directory = strchr(input, ' ');
+        if (directory && *(directory + 1))
+        {
+            change_directory(directory + 1, session);
+        }
+        else
+        {
+            strcat(session->buffer, "No directory specified.\n");
+            return 0;
+        }
+    }
+    else if (strncmp(command, "cat", 255) == 0)
+    {
+        // Extract filename from input
+        char *filename = strchr(input, ' ');
+        if (filename && *(filename + 1))
+        {
+            cat_file(filename + 1);
+        }
+        else
+        {
+            strcat(session->buffer, "No file specified.\n");
+            return 0;
+        }
+    }
+    else if (strncmp(command, "ls", 255) == 0)
+    {
+        DIR *directory = opendir(".");
+        if (directory == NULL)
+        {
+            strcat(session->buffer, "Failed to open directory.\n");
+            return 0;
+        }
+
+        struct dirent *entry;
+        while ((entry = readdir(directory)) != NULL)
+        {
+            // Calculate the remaining buffer size before writing
+            int remaining_buffer_size = sizeof(session->buffer) - strlen(session->buffer) - 1;
+            if (remaining_buffer_size > 0)
+            {
+                snprintf(session->buffer + strlen(session->buffer), remaining_buffer_size, "%s\n", entry->d_name);
+            }
+            else
+            {
+                // Buffer full, handle error if needed
+                break;
+            }
+        }
+        closedir(directory);
+    }
+
+    else if (strncmp(command, "help", 255) == 0)
+    {
+        help(session);
+    }
+    else if (strncmp(command, "exit", 255) == 0)
+    {
+        return 1; // 1 indicates that the client should be disconnected
+    }
+    else
+    {
+        strcat(session->buffer, "Unknown command.\n");
+    }
+
+    return 0;
+}
+
+int change_directory(char *path, session_t *session)
+{
+    // Store original path to restore later if needed
+    char org_path[1024];
+    if (getcwd(org_path, sizeof(org_path)) == NULL)
+    {
+        snprintf(session->buffer, sizeof(session->buffer), "Error getting current directory: %s\n", path);
+        return 0;
+    }
+
+    // Try to change to the new directory
+    if (chdir(path) != 0)
+    {
+        // On failure, report the error
+        snprintf(session->buffer, sizeof(session->buffer), "Failed to change directory to '%s': %s\n", path);
+        return 0;
+    }
+    // store the new directory
+    char new_path[1024];
+    if (getcwd(new_path, sizeof(new_path)) == NULL)
+    {
+        snprintf(session->buffer, sizeof(session->buffer), "Error getting current directory: %s\n", path);
+        return 0;
+    }
+
+    // Successfully changed directory, now store the new dir in current_dir if it still includes base_dir
+    // then return to original to maintain state
+    if (strncmp(session->base_dir, new_path, sizeof(new_path)) == 0)
+    {
+        strcpy(session->current_dir, new_path);
+        snprintf(session->buffer, sizeof(session->buffer), "Changed directory to '%s'\n", new_path);
+        chdir(org_path);
+    }
+    else // we are no longer in the base directory
+    {
+        chdir(org_path);
+        snprintf(session->buffer, sizeof(session->buffer), "Failed to change directory to '%s': Not in base directory\n", new_path);
+        return 0;
+    }
+
+    return 0;
+}
+
+void cat_file(char *filename)
+{
+    // If this is a .scam file, ask for a password to open
+    if (strstr(filename, ".scam") != NULL)
+    {
+        char correct_password[16] = "AAAAAAAA";
+        char password[256];
+        generate_password(correct_password, 16);
+        printf("You might not be cool enough to view this file. Please enter the top secret scammer's password.\n");
+        printf("Enter password: ");
+        fflush(stdout); // Flush to print prompt before input
+        fgets(password, sizeof(password), stdin);
+        // printf(password);
+        // return;
+        password[strcspn(password, "\n")] = 0; // Trim newline
+        if (strncmp(password, correct_password, 255) != 0)
+        {
+            printf(password);
+            printf(" is incorrect!");
+            return;
+        }
+    }
+
+    FILE *file = fopen(filename, "r");
+    if (file == NULL)
+    {
+        printf("Cannot open file: %s\n", filename);
+        return;
+    }
+
+    char line[256];
+    while (fgets(line, sizeof(line), file))
+    {
+        printf("%s", line); // Intentionally omitting format string to introduce vulnerability
+    }
+    fclose(file);
+}
+
+void help(session_t *session)
+{
+    strcat(session->buffer, "Available commands:\n");
+    strcat(session->buffer, "  ls - List files in the current directory\n");
+    strcat(session->buffer, "  cd [directory] - Change current working directory\n");
+    strcat(session->buffer, "  cat [file] - Display content of a text file\n");
+    strcat(session->buffer, "  help - Display this help message\n");
+    strcat(session->buffer, "  exit - Exit the program\n");
+}
