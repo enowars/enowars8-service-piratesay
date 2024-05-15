@@ -8,6 +8,7 @@
 #include <dirent.h>
 #include <limits.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 
 // Define the macro for formatting messages into the session buffer
 #define WRITE_TO_BUFFER(session, format, ...)                   \
@@ -211,6 +212,23 @@ int change_directory(char *path, session_t *session)
 
 void cat_file(char *filename, session_t *session)
 {
+    // first of all, check if the file actually exists
+    // check that it is not a directory
+    struct stat path_stat;
+    char file_path[PATH_MAX];
+    sprintf(file_path, "%s/%s", session->full_dir, filename);
+    if (stat(file_path, &path_stat) != 0)
+    {
+        WRITE_TO_BUFFER(session, "File '%s' does not exist in current directory\n", filename);
+        return;
+    }
+
+    if (S_ISDIR(path_stat.st_mode))
+    {
+        WRITE_TO_BUFFER(session, "'%s' is a directory, not a file\n", filename);
+        return;
+    }
+
     // If this is a .scam file, ask for a password to open
     if (strstr(filename, ".scam") != NULL)
     {
@@ -236,25 +254,8 @@ void cat_file(char *filename, session_t *session)
         }
     }
 
-    // Print the current working directory
-    char cwd[PATH_MAX];
-    if (getcwd(cwd, sizeof(cwd)) != NULL)
-    {
-        WRITE_TO_BUFFER(session, "Current working directory: %s\n", cwd);
-    }
-    else
-    {
-        WRITE_TO_BUFFER(session, "getcwd() error\n");
-    }
-
+    // Open and print the contents of the file
     FILE *file = fopen(filename, "r");
-    if (file == NULL)
-    {
-        WRITE_TO_BUFFER(session, "Cannot open file: '%s'\n", filename);
-        printf("value of file is %p\n", file);
-        return 0;
-    }
-
     char line[256];
     while (fgets(line, sizeof(line), file))
     {
