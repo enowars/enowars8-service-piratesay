@@ -52,7 +52,7 @@ int interact_cli(session_t *session)
 
     char command[1024];
     // chdir to this session's current directory
-    if (chdir(session->current_dir) != 0)
+    if (chdir(session->full_dir) != 0)
     {
         WRITE_TO_BUFFER(session, "Failed to use session's current directory\n");
         return 0;
@@ -113,7 +113,7 @@ int interact_cli(session_t *session)
         }
 
         // Check if the resolved path is within the base directory
-        if (strncmp(session->base_dir, resolved_path, strlen(session->base_dir)) != 0)
+        if (strncmp(session->root_dir, resolved_path, strlen(session->root_dir)) != 0)
         {
             WRITE_TO_BUFFER(session, "Operation not permitted; outside base directory\n");
             return 0;
@@ -185,19 +185,24 @@ int change_directory(char *path, session_t *session)
         return 0;
     }
 
-    // Successfully changed directory, now store the new dir in current_dir if it still includes base_dir
+    // Successfully changed directory, now store the new dir in full_dir if it still includes root_dir
     // then return to original to maintain state
-    if (strncmp(session->base_dir, new_path, strlen(session->base_dir)) == 0)
+    if (strncmp(session->root_dir, new_path, strlen(session->root_dir)) == 0)
     {
-        strcpy(session->current_dir, new_path);
-        WRITE_TO_BUFFER(session, "Changed directory to '%s'\n", new_path);
+        strcpy(session->full_dir, new_path);
+        strcpy(session->local_dir, new_path + strlen(session->root_dir));
+        // if session->local_dir is empty, set it to "/"
+        if (strlen(session->local_dir) == 0)
+        {
+            strcpy(session->local_dir, "/");
+        }
         chdir(org_path);
     }
     else // we are no longer in the base directory
     {
         chdir(org_path);
 
-        WRITE_TO_BUFFER(session, "Failed to change directory to '%s': Not in base directory\n", new_path);
+        WRITE_TO_BUFFER(session, "Unable to change to a directory outside of application root\n");
         return 0;
     }
 
@@ -231,10 +236,23 @@ void cat_file(char *filename, session_t *session)
         }
     }
 
+    // Print the current working directory
+    char cwd[PATH_MAX];
+    if (getcwd(cwd, sizeof(cwd)) != NULL)
+    {
+        WRITE_TO_BUFFER(session, "Current working directory: %s\n", cwd);
+    }
+    else
+    {
+        WRITE_TO_BUFFER(session, "getcwd() error\n");
+    }
+
     FILE *file = fopen(filename, "r");
     if (file == NULL)
     {
-        WRITE_TO_BUFFER(session, "Cannot open file: %s\n", filename);
+        WRITE_TO_BUFFER(session, "Cannot open file: '%s'\n", filename);
+        printf("value of file is %p\n", file);
+        return 0;
     }
 
     char line[256];

@@ -11,9 +11,8 @@
 #include <signal.h> // Include signal handling
 
 #define PORT 8082
-#define BUFFER_SIZE 1024
 
-char base_dir[PATH_MAX];
+char root_dir[PATH_MAX];
 int server_fd; // Make server_fd global so it can be accessed in the signal handler
 
 void handle_sigint(int sig)
@@ -54,6 +53,16 @@ void trim_whitespace(char *str)
     }
 }
 
+void print_terminal_prompt(session_t *session)
+{
+    char dir_print[PATH_MAX];
+    char dir_message[PATH_MAX];
+    memset(dir_print, 0, sizeof(dir_print));
+    strcat(dir_print, session->local_dir);
+    sprintf(dir_message, "\nanonymous%d:%s$ ", session->sock, dir_print);
+    send(session->sock, dir_message, strlen(dir_message), 0);
+}
+
 void *client_session(void *socket_desc)
 {
     int sock = *(int *)socket_desc;
@@ -61,21 +70,27 @@ void *client_session(void *socket_desc)
 
     session_t session;
     session.sock = sock;
-    strcpy(session.base_dir, base_dir);    // Base directory
-    strcpy(session.current_dir, base_dir); // Default directory
-    session.is_authenticated = 0;          // Default not authenticated
+    strcpy(session.local_dir, "/");     // Local directory
+    strcpy(session.root_dir, root_dir); // Root directory
+    strcpy(session.full_dir, root_dir); // Full path
+    session.is_authenticated = 0;       // Default not authenticated
 
     int read_size;
 
+    // Display logo
+    char *filename = "../logo.txt"; // Outside of service's root directory
+    memset(session.buffer, 0, sizeof(session.buffer));
+    cat_file(filename, &session);                          // Using own cat_file function from cli.c
+    send(sock, session.buffer, strlen(session.buffer), 0); // Echo session.buffer which now stores the contents of logo.txt
+
+    // Display welcome message
     char *welcome_msg = "Welcome to the Secure CLI. Type 'help' to see the available commands\n";
     send(sock, welcome_msg, strlen(welcome_msg), 0);
 
-    // Prepare and send the "In dir" message
-    char dir_message[1024];
-    sprintf(dir_message, "\nIn dir %s: ", session.current_dir);
-    send(sock, dir_message, strlen(dir_message), 0);
+    // Display first prompt
+    print_terminal_prompt(&session);
 
-    while ((read_size = recv(sock, session.buffer, BUFFER_SIZE, 0)) > 0)
+    while ((read_size = recv(sock, session.buffer, PATH_MAX, 0)) > 0)
     {
         // Null-terminate
         session.buffer[read_size] = '\0';
@@ -91,14 +106,9 @@ void *client_session(void *socket_desc)
         // Echo back the output from interact_cli now stored in session.buffer
         send(sock, session.buffer, strlen(session.buffer), 0);
 
-        // Prepare and send the "In dir" message
-        sprintf(dir_message, "\nIn dir %s: ", session.current_dir);
-        send(sock, dir_message, strlen(dir_message), 0);
+        // Prompt for next command
+        print_terminal_prompt(&session);
     }
-
-    // inform that connection is closed
-    char close_msg[] = "Client disconnecting...\n";
-    send(sock, close_msg, strlen(close_msg), 0);
 
     if (read_size == 0)
     {
@@ -116,8 +126,14 @@ void *client_session(void *socket_desc)
 
 void start_server()
 {
-    // find the base directory of the server at startup
-    getcwd(base_dir, sizeof(base_dir));
+    // get dir and change it to 'root' subfolder
+
+    if (chdir("root") != 0)
+    {
+        perror("'root' subfolder necessary to run the server\n");
+        exit(EXIT_FAILURE);
+    }
+    getcwd(root_dir, sizeof(root_dir));
 
     int client_sock, *new_sock;
     struct sockaddr_in server, client;

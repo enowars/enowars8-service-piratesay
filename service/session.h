@@ -7,8 +7,9 @@
 typedef struct
 {
     int sock;
-    char current_dir[PATH_MAX];
-    char base_dir[PATH_MAX];
+    char full_dir[PATH_MAX];
+    char root_dir[PATH_MAX];
+    char local_dir[PATH_MAX];
     char buffer[PATH_MAX];
     int is_authenticated;
 } session_t;
