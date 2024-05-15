@@ -77,15 +77,11 @@ void *client_session(void *socket_desc)
 
     int read_size;
 
-    // Display logo
-    char *filename = "../logo.txt"; // Outside of service's root directory
+    // Display the splash screen
+    char *filename = "../splash_screen.txt"; // Outside of service's root directory
     memset(session.buffer, 0, sizeof(session.buffer));
     cat_file(filename, &session);                          // Using own cat_file function from cli.c
     send(sock, session.buffer, strlen(session.buffer), 0); // Echo session.buffer which now stores the contents of logo.txt
-
-    // Display welcome message
-    char *welcome_msg = "Welcome to the Secure CLI. Type 'help' to see the available commands\n";
-    send(sock, welcome_msg, strlen(welcome_msg), 0);
 
     // Display first prompt
     print_terminal_prompt(&session);

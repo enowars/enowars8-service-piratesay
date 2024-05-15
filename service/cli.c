@@ -232,10 +232,10 @@ void cat_file(char *filename, session_t *session)
     // If this is a .scam file, ask for a password to open
     if (strstr(filename, ".scam") != NULL)
     {
-        char correct_password[256] = "AAAAAAAA";
+        char correct_password[256];
         generate_password(correct_password, 16);
-        WRITE_TO_BUFFER(session, "You might not be cool enough to view this file. Please enter the top secret scammer's password.\n");
-        WRITE_TO_BUFFER(session, "Enter password: ");
+        WRITE_TO_BUFFER(session, "Verify you're not a filthy casual\n");
+        WRITE_TO_BUFFER(session, "Give it to me boi: ");
         send(session->sock, session->buffer, strlen(session->buffer), 0);
         memset(session->buffer, 0, sizeof(session->buffer));
         int read_size;
@@ -249,9 +249,12 @@ void cat_file(char *filename, session_t *session)
         if (strncmp(password_input, correct_password, 255) != 0)
         {
             WRITE_TO_BUFFER(session, password_input);
-            WRITE_TO_BUFFER(session, " is incorrect!");
+            WRITE_TO_BUFFER(session, " to you too, sussy baka\n");
             return;
         }
+
+        // Correct password was entered, so generate a new password for the next time
+        round++;
     }
 
     // Open and print the contents of the file
@@ -273,4 +276,5 @@ void help(session_t *session)
     WRITE_TO_BUFFER(session, "  cat [file] - Display content of a text file\n");
     WRITE_TO_BUFFER(session, "  help - Display this help message\n");
     WRITE_TO_BUFFER(session, "  exit - Exit the program\n");
+    // TODO: consider using other commands than the normal ones (Dock to boat = exit etc. (Pirate) codex = help)
 }
