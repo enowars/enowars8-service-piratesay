@@ -109,7 +109,7 @@ int interact_cli(session_t *session)
         char resolved_path[PATH_MAX];
         if (realpath(directory_path, resolved_path) == NULL)
         {
-            WRITE_TO_BUFFER(session, "Couldn't resolve directory: %s\n", directory_path);
+            WRITE_TO_BUFFER(session, "Couldn't resolve directory '%s'\n", directory_path);
             return 0;
         }
 
@@ -123,7 +123,7 @@ int interact_cli(session_t *session)
         DIR *directory = opendir(resolved_path);
         if (directory == NULL)
         {
-            WRITE_TO_BUFFER(session, "Unable to list %s\n", resolved_path);
+            WRITE_TO_BUFFER(session, "Unable to list '%s'\n", directory_path); // TODO: Consider leaking info here as intentional vuln?
             return 0;
         }
 
