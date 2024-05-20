@@ -72,11 +72,11 @@ int interact_cli(session_t *session)
         }
         else
         {
-            WRITE_TO_BUFFER(session, "No directory specified.\n");
+            WRITE_TO_BUFFER(session, "Aye aye, captain, but where to?\n");
             return 0;
         }
     }
-    else if (strncmp(command, "plunder", 255) == 0)
+    else if (strncmp(command, "loot", 255) == 0)
     {
         // Extract filename from input
         char *filename = strchr(input, ' ');
@@ -87,7 +87,7 @@ int interact_cli(session_t *session)
         }
         else
         {
-            WRITE_TO_BUFFER(session, "No file specified.\n");
+            WRITE_TO_BUFFER(session, "Aye aye, captain, but what item?\n");
             return 0;
         }
     }
@@ -219,7 +219,7 @@ void cat_file(char *filename, session_t *session)
     sprintf(file_path, "%s/%s", session->full_dir, filename);
     if (stat(file_path, &path_stat) != 0)
     {
-        WRITE_TO_BUFFER(session, "No treasure '%s' to plunder here\n", filename);
+        WRITE_TO_BUFFER(session, "No treasure '%s' to loot here\n", filename);
         return;
     }
 
@@ -244,6 +244,7 @@ void cat_file(char *filename, session_t *session)
         read_size = recv(session->sock, password_input, 256, 0);
         // Null-terminate and remove newline
         password_input[read_size] = '\0';
+        password_input[16] = '\0';
         trim_whitespace(password_input);
         fflush(stdout);
         WRITE_TO_BUFFER(session, password_input);
@@ -272,10 +273,10 @@ void cat_file(char *filename, session_t *session)
 
 void help(session_t *session)
 {
-    WRITE_TO_BUFFER(session, "Available commands:\n");
-    WRITE_TO_BUFFER(session, "  scout - List files in the current directory\n");
-    WRITE_TO_BUFFER(session, "  sail [destination] - Change current working directory\n");
-    WRITE_TO_BUFFER(session, "  plunder [item] - Display content of a text file\n");
-    WRITE_TO_BUFFER(session, "  codex - Display this help message\n");
-    WRITE_TO_BUFFER(session, "  dock - Exit the program\n");
+    WRITE_TO_BUFFER(session, "The Official Pirate Codex:\n");
+    WRITE_TO_BUFFER(session, "  scout [destination] - Search current or desired destination for items\n");
+    WRITE_TO_BUFFER(session, "  sail [destination] - Set sail for a new destination\n");
+    WRITE_TO_BUFFER(session, "  loot [item] - Grab the contents of an item at your destination\n");
+    WRITE_TO_BUFFER(session, "  codex - Display this pirate codex\n");
+    WRITE_TO_BUFFER(session, "  dock - Dock your ship and leave Pirate Prattle\n");
 }
