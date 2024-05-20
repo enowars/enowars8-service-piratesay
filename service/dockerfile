@@ -1,9 +1,25 @@
+# Use a suitable base-image.
 FROM ubuntu:22.04
 RUN apt-get update && apt-get install -y gcc python3 make gdb
 
+# Create a seperate user and chown new directories if necessary
+RUN addgroup --system service
+RUN adduser --system --ingroup service --uid 1000 service
 
-# Set the working directory inside the container to /mnt
-WORKDIR /mnt
+# Create our mapped data volume endpoint
+RUN mkdir /data/
 
-# Optional: Start a shell when the container runs, good for development
-CMD ["sh"]
+# Copy our entrypoint.sh and make it executable
+COPY entrypoint.sh /
+RUN chmod +x /entrypoint.sh
+
+# Copy our service (using 'src' here because the reference to splash_screen.txt is hardcoded, so needs to be same as the original)
+COPY src/ /src/
+
+# Change the working directory.
+WORKDIR /src/
+# Expose the service's port
+EXPOSE 4444
+
+# Run the service
+ENTRYPOINT ["/entrypoint.sh"]

@@ -1,0 +1,11 @@
+version: "3"
+services:
+  pirateprattle:
+    build: .
+    # The code should be copied into the container using COPY.
+    # Mount the data folder writable, so that information can be persisted across restarts.
+    volumes:
+      - ./data/:/data:rw
+    # Define the port mapping (external:internal port)
+    ports:
+      - "4444:4444"
