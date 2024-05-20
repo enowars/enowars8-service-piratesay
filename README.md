@@ -2,7 +2,7 @@
 
 TODO
 
-- [ ] Change name of service and commands in command line. This will also somewhat help even out between beginners and advanced players, novel for both.
+- [x] Change name of service and commands in command line. This will also somewhat help even out between beginners and advanced players, novel for both.
 - [ ] Fill with a lot of dummy content. Make sure it is obvious what is related and unrelated to the actual flags. (Should players be able to create fake entries themself?)
 - [ ] Implement protected folders from which opening files is not possible. Determine best vuln to implement here (overwrite is_admin thing vs explore race conditions requiring multiple connections vs combining elements from both approaches).
 - [ ] Implement the checker

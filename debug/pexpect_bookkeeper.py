@@ -9,7 +9,7 @@ child = pexpect.spawn('telnet localhost 8082')
 child.expect(r'.*\$ '.encode())
 
 # Send the command that triggers the password request
-child.sendline('cat t.scam')
+child.sendline('plunder t.scam')
 
 # Handle the output and wait for the password prompt
 child.expect(r'.*\: '.encode())
@@ -42,9 +42,9 @@ address2 = bytes.fromhex(address2_hex).decode()[::-1]
 # Print the password
 print(f'Password: {address1}{address2}')
 
-# Now try to cat the file again
+# Now try to plunder the file again
 child.expect(r'.*\$ '.encode())
-child.sendline('cat t.scam')
+child.sendline('plunder t.scam')
 child.expect(r'.*\: '.encode())
 child.sendline(f'{address1}{address2}')
 

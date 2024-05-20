@@ -62,7 +62,7 @@ int interact_cli(session_t *session)
     // Parse the first word as the command
     sscanf(input, "%255s", command);
 
-    if (strncmp(command, "cd", 255) == 0)
+    if (strncmp(command, "sail", 255) == 0)
     {
         // Extract directory from input
         char *directory = strchr(input, ' ');
@@ -76,7 +76,7 @@ int interact_cli(session_t *session)
             return 0;
         }
     }
-    else if (strncmp(command, "cat", 255) == 0)
+    else if (strncmp(command, "plunder", 255) == 0)
     {
         // Extract filename from input
         char *filename = strchr(input, ' ');
@@ -91,7 +91,7 @@ int interact_cli(session_t *session)
             return 0;
         }
     }
-    else if (strncmp(command, "ls", 255) == 0)
+    else if (strncmp(command, "scout", 255) == 0)
     {
         // Extract directory from input, if provided
         char *directory_name = strchr(input, ' ');
@@ -109,21 +109,21 @@ int interact_cli(session_t *session)
         char resolved_path[PATH_MAX];
         if (realpath(directory_path, resolved_path) == NULL)
         {
-            WRITE_TO_BUFFER(session, "Couldn't resolve directory '%s'\n", directory_path);
+            WRITE_TO_BUFFER(session, "Couldn't find any place to scout '%s'\n", directory_path);
             return 0;
         }
 
         // Check if the resolved path is within the base directory
         if (strncmp(session->root_dir, resolved_path, strlen(session->root_dir)) != 0)
         {
-            WRITE_TO_BUFFER(session, "Operation not permitted; outside base directory\n");
+            WRITE_TO_BUFFER(session, "Can't scout that far from shore\n");
             return 0;
         }
 
         DIR *directory = opendir(resolved_path);
         if (directory == NULL)
         {
-            WRITE_TO_BUFFER(session, "Unable to list '%s'\n", directory_path); // TODO: Consider leaking info here as intentional vuln?
+            WRITE_TO_BUFFER(session, "Scouting '%s' doesn't really work\n", directory_path); // TODO: Consider leaking info here as intentional vuln?
             return 0;
         }
 
@@ -145,17 +145,17 @@ int interact_cli(session_t *session)
         closedir(directory);
     }
 
-    else if (strncmp(command, "help", 255) == 0)
+    else if (strncmp(command, "codex", 255) == 0)
     {
         help(session);
     }
-    else if (strncmp(command, "exit", 255) == 0)
+    else if (strncmp(command, "dock", 255) == 0)
     {
         return 1; // 1 indicates that the client should be disconnected
     }
     else
     {
-        WRITE_TO_BUFFER(session, "Unknown command.\n");
+        WRITE_TO_BUFFER(session, "Arr! That ain't proper pirate speech. Have you read the codex?\n");
     }
 
     return 0;
@@ -175,7 +175,7 @@ int change_directory(char *path, session_t *session)
     if (chdir(path) != 0)
     {
         // On failure, report the error
-        WRITE_TO_BUFFER(session, "Failed to change directory to '%s'\n", path);
+        WRITE_TO_BUFFER(session, "Couldn't set course for '%s'\n", path);
         return 0;
     }
     // store the new directory
@@ -203,7 +203,7 @@ int change_directory(char *path, session_t *session)
     {
         chdir(org_path);
 
-        WRITE_TO_BUFFER(session, "Unable to change to a directory outside of application root\n");
+        WRITE_TO_BUFFER(session, "Unable to sail that far from shore\n");
         return 0;
     }
 
@@ -219,13 +219,13 @@ void cat_file(char *filename, session_t *session)
     sprintf(file_path, "%s/%s", session->full_dir, filename);
     if (stat(file_path, &path_stat) != 0)
     {
-        WRITE_TO_BUFFER(session, "File '%s' does not exist in current directory\n", filename);
+        WRITE_TO_BUFFER(session, "No treasure '%s' to plunder here\n", filename);
         return;
     }
 
     if (S_ISDIR(path_stat.st_mode))
     {
-        WRITE_TO_BUFFER(session, "'%s' is a directory, not a file\n", filename);
+        WRITE_TO_BUFFER(session, "'%s' is a destination, not a treasure\n", filename);
         return;
     }
 
@@ -234,8 +234,8 @@ void cat_file(char *filename, session_t *session)
     {
         char correct_password[256];
         generate_password(correct_password, 16);
-        WRITE_TO_BUFFER(session, "Verify you're not a filthy casual\n");
-        WRITE_TO_BUFFER(session, "Give it to me boi: ");
+        WRITE_TO_BUFFER(session, "A parrot is guarding it tightly\n");
+        WRITE_TO_BUFFER(session, "Speak your words: ");
         send(session->sock, session->buffer, strlen(session->buffer), 0);
         memset(session->buffer, 0, sizeof(session->buffer));
         int read_size;
@@ -246,10 +246,12 @@ void cat_file(char *filename, session_t *session)
         password_input[read_size] = '\0';
         trim_whitespace(password_input);
         fflush(stdout);
+        WRITE_TO_BUFFER(session, password_input);
+        WRITE_TO_BUFFER(session, ", ");
+        WRITE_TO_BUFFER(session, password_input);
+        WRITE_TO_BUFFER(session, ", captain!\n");
         if (strncmp(password_input, correct_password, 255) != 0)
         {
-            WRITE_TO_BUFFER(session, password_input);
-            WRITE_TO_BUFFER(session, " to you too, sussy baka\n");
             return;
         }
 
@@ -271,10 +273,9 @@ void cat_file(char *filename, session_t *session)
 void help(session_t *session)
 {
     WRITE_TO_BUFFER(session, "Available commands:\n");
-    WRITE_TO_BUFFER(session, "  ls - List files in the current directory\n");
-    WRITE_TO_BUFFER(session, "  cd [directory] - Change current working directory\n");
-    WRITE_TO_BUFFER(session, "  cat [file] - Display content of a text file\n");
-    WRITE_TO_BUFFER(session, "  help - Display this help message\n");
-    WRITE_TO_BUFFER(session, "  exit - Exit the program\n");
-    // TODO: consider using other commands than the normal ones (Dock to boat = exit etc. (Pirate) codex = help)
+    WRITE_TO_BUFFER(session, "  scout - List files in the current directory\n");
+    WRITE_TO_BUFFER(session, "  sail [destination] - Change current working directory\n");
+    WRITE_TO_BUFFER(session, "  plunder [item] - Display content of a text file\n");
+    WRITE_TO_BUFFER(session, "  codex - Display this help message\n");
+    WRITE_TO_BUFFER(session, "  dock - Exit the program\n");
 }
