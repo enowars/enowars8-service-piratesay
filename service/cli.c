@@ -21,7 +21,7 @@ int round = 1; // not safe by itself when everyone has the same seed (use flag f
 void generate_password(char *password, size_t length)
 {
     // Define the characters that we want to use in our password
-    char characters[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()";
+    char characters[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$^&*()";
 
     // Initialize the random number generator
     srand(round);
@@ -82,6 +82,12 @@ int interact_cli(session_t *session)
         char *filename = strchr(input, ' ');
         if (filename && *(filename + 1))
         {
+            // If filename include "/", it is not valid, as we can only loot at the current destination
+            if (strchr(filename + 1, '/') != NULL)
+            {
+                WRITE_TO_BUFFER(session, "Can't loot that far from shore\n");
+                return 0;
+            }
             cat_file(filename + 1, session);
             return 0;
         }
@@ -116,7 +122,7 @@ int interact_cli(session_t *session)
         // Check if the resolved path is within the base directory
         if (strncmp(session->root_dir, resolved_path, strlen(session->root_dir)) != 0)
         {
-            WRITE_TO_BUFFER(session, "Can't scout that far from shore\n");
+            WRITE_TO_BUFFER(session, "Only blue ocean as far as the eye can see\n");
             return 0;
         }
 
@@ -203,7 +209,7 @@ int change_directory(char *path, session_t *session)
     {
         chdir(org_path);
 
-        WRITE_TO_BUFFER(session, "Unable to sail that far from shore\n");
+        WRITE_TO_BUFFER(session, "The waves are too rough to sail that far!\n");
         return 0;
     }
 
@@ -219,7 +225,7 @@ void cat_file(char *filename, session_t *session)
     sprintf(file_path, "%s/%s", session->full_dir, filename);
     if (stat(file_path, &path_stat) != 0)
     {
-        WRITE_TO_BUFFER(session, "No treasure '%s' to loot here\n", filename);
+        WRITE_TO_BUFFER(session, "No treasure '%s' to loot\n", filename);
         return;
     }
 
@@ -229,22 +235,20 @@ void cat_file(char *filename, session_t *session)
         return;
     }
 
-    // If this is a .scam file, ask for a password to open
-    if (strstr(filename, ".scam") != NULL)
+    // If this is a .treasure file, ask for a password to open
+    if (strstr(filename, ".treasure") != NULL)
     {
         char correct_password[256];
         generate_password(correct_password, 16);
-        WRITE_TO_BUFFER(session, "A parrot is guarding it tightly\n");
+        WRITE_TO_BUFFER(session, "A parrot is guarding the treasure tightly\n");
         WRITE_TO_BUFFER(session, "Speak your words: ");
         send(session->sock, session->buffer, strlen(session->buffer), 0);
         memset(session->buffer, 0, sizeof(session->buffer));
         int read_size;
         char password_input[256];
-        // printf("This is before: %s\n", correct_password);
         read_size = recv(session->sock, password_input, 256, 0);
         // Null-terminate and remove newline
         password_input[read_size] = '\0';
-        password_input[16] = '\0';
         trim_whitespace(password_input);
         fflush(stdout);
         WRITE_TO_BUFFER(session, password_input);
@@ -262,6 +266,12 @@ void cat_file(char *filename, session_t *session)
 
     // Open and print the contents of the file
     FILE *file = fopen(filename, "r");
+    // print current directory
+    if (file == NULL)
+    {
+        printf("tried opening undefined file: %s\n", filename);
+        return;
+    }
     char line[256];
     while (fgets(line, sizeof(line), file))
     {

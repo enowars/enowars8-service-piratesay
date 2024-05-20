@@ -22,6 +22,41 @@ void handle_sigint(int sig)
     exit(0);          // Exit the program
 }
 
+void sanitize_string(char *input)
+{
+
+    char buffer[PATH_MAX];
+    char *insert_point = buffer;
+    const char *tmp = input;
+    size_t target_len = 2;
+
+    while (*tmp)
+    {
+        const char *p = strstr(tmp, "%n");
+
+        if (p == NULL)
+        {
+            // None found, copy all
+            strcpy(insert_point, tmp);
+            insert_point += strlen(insert_point);
+            break;
+        }
+
+        // Copy part of the string before the target
+        memcpy(insert_point, tmp, p - tmp);
+        insert_point += p - tmp;
+
+        // Skip the target string
+        tmp = p + target_len;
+    }
+
+    // Null-terminate the buffer
+    *insert_point = '\0';
+
+    // Copy sanitized buffer back to input
+    strcpy(input, buffer);
+}
+
 void trim_whitespace(char *str)
 {
     if (str == NULL)
@@ -51,6 +86,8 @@ void trim_whitespace(char *str)
         str[len - 1] = '\0';
         len--;
     }
+
+    sanitize_string(str);
 }
 
 void print_terminal_prompt(session_t *session)
@@ -77,11 +114,17 @@ void *client_session(void *socket_desc)
 
     int read_size;
 
-    // Display the splash screen
+    // chdir to current directory (root for a new session) and display splash screen
+    if (chdir(session.full_dir) != 0)
+    {
+        printf("Error, could not start session from its root directory\n");
+        close(sock);
+        return NULL;
+    }
     char *filename = "../splash_screen.txt"; // Outside of service's root directory
     memset(session.buffer, 0, sizeof(session.buffer));
     cat_file(filename, &session);                          // Using own cat_file function from cli.c
-    send(sock, session.buffer, strlen(session.buffer), 0); // Echo session.buffer which now stores the contents of logo.txt
+    send(sock, session.buffer, strlen(session.buffer), 0); // Echo session.buffer which now stores the contents of splash_screen.txt
 
     // Display first prompt
     print_terminal_prompt(&session);
