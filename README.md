@@ -1,4 +1,4 @@
-# enowars8-service-bookkeeper
+# enowars8-service-pirateprattle
 
 ### TODO
 
@@ -16,6 +16,7 @@
   - [x] How to prevent arbitrary code execution if the attacker can write an address to the stack and store values in it (Solution: Assuming solved since %n isn't allowed now)
   - [ ] How to solve the potential is_admin problem for the checker. How would it verify itself? (random credentials each round that are cryptographically safe?)
   - [ ] General removel of all warnings and mis-matching of buffer sizes etc. Just use PATH_MAX for everything basically?
+  - [ ] Implement locks to prevent race conditions and find out how to deal with a potential issue: User 1 is typing in password to open a file while user 2 is changing dir.
 
 ### For fun if time
 
