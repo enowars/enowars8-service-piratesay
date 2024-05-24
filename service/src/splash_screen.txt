@@ -31,5 +31,6 @@
 (  _ \(  )(  _ \ / _\(_  _)(  __)  (  _ \(  _ \ / _\(_  _)(_  _)(  )  (  __)
  ) __/ )(  )   //    \ )(   ) _)    ) __/ )   //    \ )(    )(  / (_/\ ) _) 
 (__)  (__)(__\_)\_/\_/(__) (____)  (__)  (__\_)\_/\_/(__)  (__) \____/(____)
+
 Welcome to Pirate Prattle, your go-to place for documenting your piratical achievements!
 Your friends think they can out-scam you? Show them who's the king of the seven seas!

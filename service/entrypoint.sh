@@ -8,5 +8,5 @@ chown -R service:service "/data/"
 # Build the project
 make
 
-# Launch our service as user 'service'
-exec su -s /bin/sh -c './pirateprattle' service
+# Launch our service as user 'service' and run 'run' within gdb
+exec su -s /bin/sh -c 'gdb -ex run -ex quit pirateprattle' service

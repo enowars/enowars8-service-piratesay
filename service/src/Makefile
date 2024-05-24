@@ -1,7 +1,7 @@
 CC=gcc
 CFLAGS=-g -pthread
 DEPS = server.h cli.h session.h
-OBJ = server.o main.o cli.o 
+OBJ = server.o cli.o session.o 
 
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)

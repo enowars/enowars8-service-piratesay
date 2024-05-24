@@ -9,6 +9,7 @@
 #include <limits.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <time.h>
 
 // Define the macro for formatting messages into the session buffer
 #define WRITE_TO_BUFFER(session, format, ...)                   \
@@ -75,6 +76,141 @@ int interact_cli(session_t *session)
             WRITE_TO_BUFFER(session, "Aye aye, captain, but where to?\n");
             return 0;
         }
+    }
+    else if (strncmp(command, "bury", 255) == 0)
+    {
+        char file_path[1024] = "";
+        char custom_ID[20] = "";
+        char *argument1 = strchr(input, ' ');
+        if (argument1 && *(argument1 + 1))
+        {
+            char *argument2 = strchr(argument1 + 1, ' ');
+            if (argument2 && *(argument2 + 1))
+            {
+                strncpy(file_path, argument1 + 1, argument2 - argument1 - 1);
+                file_path[argument2 - argument1 - 1] = '\0';
+                strcpy(custom_ID, argument2 + 1);
+                trim_whitespace(file_path);
+                trim_whitespace(custom_ID);
+            }
+            else
+            {
+                strcpy(file_path, argument1 + 1);
+                trim_whitespace(file_path);
+                generate_password(custom_ID, 16);
+            }
+        }
+
+        // If at root, can't bury treasure
+        if (strcmp(session->full_dir, session->root_dir) == 0)
+        {
+            WRITE_TO_BUFFER(session, "Can't bury treasure at sea\n");
+            return 0;
+        }
+
+        // Ask about the scam
+        char date[11];
+        char time_str[6];
+        char content[PATH_MAX];
+
+        // Ask for scam details
+        WRITE_TO_BUFFER(session, "What time to save for? (YYYY-MM-DD HH:MM or blank for now): ");
+        send(session->sock, session->buffer, strlen(session->buffer), 0);
+        memset(session->buffer, 0, sizeof(session->buffer));
+        int read_size;
+        char time_input[256];
+        read_size = recv(session->sock, time_input, 256, 0);
+        // Null-terminate and remove newline
+        time_input[read_size - 1] = '\0'; // remove newline
+
+        struct tm tm;
+        // Using provided date and time
+        if (strptime(time_input, "%Y-%m-%d %H:%M", &tm) != NULL)
+        {
+            sprintf(date, "%04d-%02d-%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+            sprintf(time_str, "%02d:%02d", tm.tm_hour, tm.tm_min);
+        }
+        else
+        {
+            // Using actual local date and time
+            time_t t = time(NULL);
+            struct tm *tm = localtime(&t);
+            strftime(date, sizeof(date), "%Y-%m-%d", tm);
+            strftime(time_str, sizeof(time_str), "%H:%M", tm);
+        }
+
+        WRITE_TO_BUFFER(session, "Protect with a parrot? (enter password or blank for nothing): ");
+        send(session->sock, session->buffer, strlen(session->buffer), 0);
+        memset(session->buffer, 0, sizeof(session->buffer));
+        read_size;
+        char parrot_input[256];
+        read_size = recv(session->sock, parrot_input, 256, 0);
+        // Null-terminate and remove newline
+        parrot_input[read_size] = '\0';
+        trim_whitespace(parrot_input);
+        fflush(stdout);
+        WRITE_TO_BUFFER(session, "What's your message: ");
+        send(session->sock, session->buffer, strlen(session->buffer), 0);
+        memset(session->buffer, 0, sizeof(session->buffer));
+        char message_input[1024];
+        read_size = recv(session->sock, message_input, 1024, 0);
+        // Null-terminate and remove newline
+        message_input[read_size] = '\0';
+        fflush(stdout);
+
+        sprintf(content, "Scam Details:\n----------------\nDate: %s\nTime: %s UTC\nScammer: %s %s\nScammer ID: %s\n\nMessage: %s",
+                date,
+                time_str, session->pirate_adjective, session->pirate_noun, custom_ID, message_input);
+
+        printf("%s\n", content);
+
+        // Create a new file at the current destination
+        char scam_filename[1024];
+
+        // If there is already a second argument, use it as the filename
+        if (strlen(file_path) > 0)
+        {
+            strcpy(scam_filename, file_path);
+        }
+        else
+        {
+            sprintf(scam_filename, "%s_%s_scam_%s_%s", session->pirate_adjective, session->pirate_noun, date, time_str);
+        }
+
+        // Save as a treasure file with a password
+        if (strncmp(parrot_input, "", 255) != 0)
+        {
+            sprintf(scam_filename, "%s.treasure", scam_filename);
+            // add the password to the end of the content
+            sprintf(content, "%s\n\nProtected with password:\n%s", content, parrot_input);
+            WRITE_TO_BUFFER(session, "Protected with password: %s\n", parrot_input);
+        }
+        else // or normal log file
+        {
+            sprintf(scam_filename, "%s.log", scam_filename);
+        }
+
+        // If file already exists, creation fails
+        if (access(scam_filename, F_OK) != -1)
+        {
+            // File exists
+            WRITE_TO_BUFFER(session, "Something is already burried at '%s'\n", scam_filename);
+            return 0;
+        }
+
+        printf("Creating file: %s\n", scam_filename);
+
+        FILE *scam_file = fopen(scam_filename, "w");
+        if (scam_file == NULL)
+        {
+            WRITE_TO_BUFFER(session, "Couldn't bury the treasure\n");
+            return 0;
+        }
+        // Write the scam details to the file
+        fprintf(scam_file, "%s", content);
+        fclose(scam_file);
+
+        WRITE_TO_BUFFER(session, "Treasure burried at '%s'\n", scam_filename);
     }
     else if (strncmp(command, "loot", 255) == 0)
     {
@@ -226,7 +362,6 @@ void cat_file(char *filename, session_t *session)
     if (stat(file_path, &path_stat) != 0)
     {
         WRITE_TO_BUFFER(session, "No treasure '%s' to loot\n", filename);
-        WRITE_TO_BUFFER(session, "Current location is '%s'\n", getcwd(NULL, 0));
         return;
     }
 
@@ -240,7 +375,19 @@ void cat_file(char *filename, session_t *session)
     if (strstr(filename, ".treasure") != NULL)
     {
         char correct_password[256];
-        generate_password(correct_password, 16);
+        // read the last line of the file, this is the password
+        FILE *file = fopen(file_path, "r");
+        if (file == NULL)
+        {
+            WRITE_TO_BUFFER(session, "No treasure '%s' to loot\n", filename);
+            return;
+        }
+        char line[256];
+        while (fgets(line, sizeof(line), file))
+        {
+            strcpy(correct_password, line);
+        }
+        fclose(file);
         WRITE_TO_BUFFER(session, "A parrot is guarding the treasure tightly\n");
         WRITE_TO_BUFFER(session, "Speak your words: ");
         send(session->sock, session->buffer, strlen(session->buffer), 0);
@@ -287,6 +434,7 @@ void help(session_t *session)
     WRITE_TO_BUFFER(session, "The Official Pirate Codex:\n");
     WRITE_TO_BUFFER(session, "  scout [destination] - Search current or desired destination for items\n");
     WRITE_TO_BUFFER(session, "  sail [destination] - Set sail for a new destination\n");
+    WRITE_TO_BUFFER(session, "  bury - bury treasure for others to find at your destination\n");
     WRITE_TO_BUFFER(session, "  loot [item] - Grab the contents of an item at your destination\n");
     WRITE_TO_BUFFER(session, "  codex - Display this pirate codex\n");
     WRITE_TO_BUFFER(session, "  dock - Dock your ship and leave Pirate Prattle\n");

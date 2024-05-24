@@ -96,7 +96,7 @@ void print_terminal_prompt(session_t *session)
     char dir_message[PATH_MAX];
     memset(dir_print, 0, sizeof(dir_print));
     strcat(dir_print, session->local_dir);
-    sprintf(dir_message, "\nanonymous%d:%s$ ", session->sock, dir_print);
+    sprintf(dir_message, "\n%s %s:%s$ ", session->pirate_adjective, session->pirate_noun, dir_print);
     send(session->sock, dir_message, strlen(dir_message), 0);
 }
 
@@ -110,7 +110,9 @@ void *client_session(void *socket_desc)
     strcpy(session.local_dir, "/");     // Local directory
     strcpy(session.root_dir, root_dir); // Root directory
     strcpy(session.full_dir, root_dir); // Full path
-    session.is_authenticated = 0;       // Default not authenticated
+    strcpy(session.pirate_adjective, get_random_adjective());
+    strcpy(session.pirate_noun, get_random_noun());
+    session.is_authenticated = 0; // Default not authenticated
 
     int read_size;
 
@@ -163,7 +165,7 @@ void *client_session(void *socket_desc)
     return NULL; // Correct return type for pthread function
 }
 
-void start_server()
+void main()
 {
     // get dir and change it to 'data' subfolder
 
