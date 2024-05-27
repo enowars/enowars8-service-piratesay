@@ -21,7 +21,7 @@
 - [ ] Implement protected folders from which opening files is not possible. Determine best vuln to implement here (overwrite is_admin thing vs explore race conditions requiring multiple connections vs combining elements from both approaches).
 - [x] Implement the checker
 - [x] Remove chdir to prevent issues with threads
-- [ ] Fix setup the way the slides from the lectures wanted (documention folder, docker compose up should work automatically, .yml file for some CI/CD stuff)
+- [x] Fix setup the way the slides from the lectures wanted (documention folder, docker compose up should work automatically, .yml file for some CI/CD stuff)
 - [ ] Test a whole bunch to make sure there aren't unwanted exploits. Questions so far:
 
   - [x] How to prevent %n exploit that can change the actual password for the first exploit. This might be bad if it inferes and ruins the experience for the other groups as they can then no longer use the intended exploit.

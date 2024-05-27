@@ -72,7 +72,7 @@ int interact_cli(session_t *session)
     else if (strncmp(command, "bury", 255) == 0)
     {
         char file_path[1024] = "";
-        char custom_ID[20] = "";
+        char custom_ID[128] = "";
         char *argument1 = strchr(input, ' ');
         if (argument1 && *(argument1 + 1))
         {
