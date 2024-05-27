@@ -33,4 +33,4 @@
 
 ### For fun if time
 
-Have a custom pirate tag for each client that joins (pull from a list of 100-ish)
+- [x] Have a custom pirate tag for each client that joins (pull from a list of 100-ish)
