@@ -1,6 +1,6 @@
-# Pirate Prattle
+# Pirate Say
 
-Pirate Prattle is a TCP-server written in C that presents itself as a pirate-themed dark web forum service. The service contains various logs dictating/accounting the achievements of scammers. The service contains the following file types:
+Pirate Say is a TCP-server written in C that presents itself as a pirate-themed dark web forum service. The service contains various logs dictating/accounting the achievements of scammers. The service contains the following file types:
 
 - .log files: these are standard log files without any password protection
 - .treasure files: these files are protected by a password input that contain a format string vulnerability
