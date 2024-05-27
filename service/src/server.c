@@ -96,7 +96,7 @@ void print_terminal_prompt(session_t *session)
     char dir_message[PATH_MAX];
     memset(dir_print, 0, sizeof(dir_print));
     strcat(dir_print, session->local_dir);
-    sprintf(dir_message, "\n%s %s:%s$ ", session->pirate_adjective, session->pirate_noun, dir_print);
+    sprintf(dir_message, "\n%s%s:%s$ ", session->pirate_adjective, session->pirate_noun, dir_print);
     send(session->sock, dir_message, strlen(dir_message), 0);
 }
 
@@ -116,13 +116,6 @@ void *client_session(void *socket_desc)
 
     int read_size;
 
-    // chdir to current directory (root for a new session) and display splash screen
-    if (chdir(session.full_dir) != 0)
-    {
-        printf("Error, could not start session from its root directory\n");
-        close(sock);
-        return NULL;
-    }
     char *filename = "../src/splash_screen.txt"; // Outside of service's root directory
     memset(session.buffer, 0, sizeof(session.buffer));
     cat_file(filename, &session);                          // Using own cat_file function from cli.c
@@ -167,6 +160,9 @@ void *client_session(void *socket_desc)
 
 void main()
 {
+    // Seed the random number generator with the current time
+    srand(time(NULL));
+
     // get dir and change it to 'data' subfolder
 
     if (chdir("../data") != 0)

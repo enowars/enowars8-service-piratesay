@@ -10,6 +10,9 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <pthread.h>
+
+pthread_mutex_t file_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Define the macro for formatting messages into the session buffer
 #define WRITE_TO_BUFFER(session, format, ...)                   \
@@ -17,15 +20,10 @@
              sizeof(session->buffer) - strlen(session->buffer), \
              format, ##__VA_ARGS__)
 
-int round = 1; // not safe by itself when everyone has the same seed (use flag from server as seed?)
-
 void generate_password(char *password, size_t length)
 {
     // Define the characters that we want to use in our password
     char characters[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$^&*()";
-
-    // Initialize the random number generator
-    srand(round);
 
     // Generate a random password
     for (size_t i = 0; i < length; i++)
@@ -53,12 +51,6 @@ int interact_cli(session_t *session)
     memset(session->buffer, 0, sizeof(session->buffer));
 
     char command[1024];
-    // chdir to this session's current directory
-    if (chdir(session->full_dir) != 0)
-    {
-        WRITE_TO_BUFFER(session, "Failed to use session's current directory\n");
-        return 0;
-    }
 
     // Parse the first word as the command
     sscanf(input, "%255s", command);
@@ -105,6 +97,13 @@ int interact_cli(session_t *session)
         if (strcmp(session->full_dir, session->root_dir) == 0)
         {
             WRITE_TO_BUFFER(session, "Can't bury treasure at sea\n");
+            return 0;
+        }
+
+        // If file path contains "/", it is not valid
+        if (strchr(file_path, '/') != NULL)
+        {
+            WRITE_TO_BUFFER(session, "Can only bury treasure where your ship is\n");
             return 0;
         }
 
@@ -155,7 +154,7 @@ int interact_cli(session_t *session)
         char message_input[1024];
         read_size = recv(session->sock, message_input, 1024, 0);
         // Null-terminate and remove newline
-        message_input[read_size] = '\0';
+        message_input[read_size - 1] = '\0';
         fflush(stdout);
 
         sprintf(content, "Scam Details:\n----------------\nDate: %s\nTime: %s UTC\nScammer: %s %s\nScammer ID: %s\n\nMessage: %s",
@@ -174,7 +173,26 @@ int interact_cli(session_t *session)
         }
         else
         {
-            sprintf(scam_filename, "%s_%s_scam_%s_%s", session->pirate_adjective, session->pirate_noun, date, time_str);
+            // Generate a filename based on scam details
+            char lower_case_pirate_adjective[sizeof(session->pirate_adjective)];
+            char lower_case_pirate_noun[sizeof(session->pirate_noun)];
+            strcpy(lower_case_pirate_adjective, session->pirate_adjective);
+            strcpy(lower_case_pirate_noun, session->pirate_noun);
+            lower_case_pirate_adjective[0] = tolower(lower_case_pirate_adjective[0]);
+            lower_case_pirate_noun[0] = tolower(lower_case_pirate_noun[0]);
+
+            int j = 0;
+            for (int i = 0; i < strlen(time_str); i++)
+            {
+                if (time_str[i] != ':')
+                {
+                    // can modify directly, as it is not re-used later
+                    time_str[j++] = time_str[i];
+                }
+            }
+            time_str[j] = '\0'; // Null-terminate the adjusted time string
+
+            sprintf(scam_filename, "%s_%s_scam_%s_%s", lower_case_pirate_adjective, lower_case_pirate_noun, date, time_str);
         }
 
         // Save as a treasure file with a password
@@ -190,20 +208,29 @@ int interact_cli(session_t *session)
             sprintf(scam_filename, "%s.log", scam_filename);
         }
 
+        // Lock the mutex before entering file creation critical section
+        //  (important to lock before we check if a file with this path already exists)
+        pthread_mutex_lock(&file_mutex);
+
+        // Get absolute path
+        char absolute_path[PATH_MAX];
+        snprintf(absolute_path, sizeof(absolute_path), "%s/%s", session->full_dir, scam_filename);
         // If file already exists, creation fails
-        if (access(scam_filename, F_OK) != -1)
+        if (access(absolute_path, F_OK) != -1)
         {
             // File exists
             WRITE_TO_BUFFER(session, "Something is already burried at '%s'\n", scam_filename);
+            pthread_mutex_unlock(&file_mutex);
             return 0;
         }
 
         printf("Creating file: %s\n", scam_filename);
 
-        FILE *scam_file = fopen(scam_filename, "w");
+        FILE *scam_file = fopen(absolute_path, "w");
         if (scam_file == NULL)
         {
             WRITE_TO_BUFFER(session, "Couldn't bury the treasure\n");
+            pthread_mutex_unlock(&file_mutex);
             return 0;
         }
         // Write the scam details to the file
@@ -211,6 +238,8 @@ int interact_cli(session_t *session)
         fclose(scam_file);
 
         WRITE_TO_BUFFER(session, "Treasure burried at '%s'\n", scam_filename);
+
+        pthread_mutex_unlock(&file_mutex);
     }
     else if (strncmp(command, "loot", 255) == 0)
     {
@@ -221,7 +250,7 @@ int interact_cli(session_t *session)
             // If filename include "/", it is not valid, as we can only loot at the current destination
             if (strchr(filename + 1, '/') != NULL)
             {
-                WRITE_TO_BUFFER(session, "Can't loot that far from shore\n");
+                WRITE_TO_BUFFER(session, "Can only loot where your ship is\n");
                 return 0;
             }
             cat_file(filename + 1, session);
@@ -247,9 +276,10 @@ int interact_cli(session_t *session)
         {
             strcpy(directory_path, ".");
         }
-
+        char absolute_path[PATH_MAX];
+        snprintf(absolute_path, sizeof(absolute_path), "%s/%s", session->full_dir, directory_path);
         char resolved_path[PATH_MAX];
-        if (realpath(directory_path, resolved_path) == NULL)
+        if (realpath(absolute_path, resolved_path) == NULL)
         {
             WRITE_TO_BUFFER(session, "Couldn't find any place to scout '%s'\n", directory_path);
             return 0;
@@ -305,51 +335,54 @@ int interact_cli(session_t *session)
 
 int change_directory(char *path, session_t *session)
 {
-    // Store original path to restore later if needed
-    char org_path[1024];
-    if (getcwd(org_path, sizeof(org_path)) == NULL)
+    char absolute_path[PATH_MAX];
+    snprintf(absolute_path, sizeof(absolute_path), "%s/%s", session->full_dir, path);
+    char resolved_path[PATH_MAX];
+
+    // 1. Resolve the path to an absolute path
+    if (realpath(absolute_path, resolved_path) == NULL)
     {
-        WRITE_TO_BUFFER(session, "Error getting old directory: %s\n", path);
+        WRITE_TO_BUFFER(session, "Couldn't set course for '%s'. Path does not exist or is not accessible.\n", path);
         return 0;
     }
 
-    // Try to change to the new directory
-    if (chdir(path) != 0)
+    // 2. Check if the resolved path is a directory
+    struct stat path_stat;
+    if (stat(resolved_path, &path_stat) != 0)
     {
-        // On failure, report the error
-        WRITE_TO_BUFFER(session, "Couldn't set course for '%s'\n", path);
-        return 0;
-    }
-    // store the new directory
-    char new_path[1024];
-    if (getcwd(new_path, sizeof(new_path)) == NULL)
-    {
-        WRITE_TO_BUFFER(session, "Error getting new directory: %s\n", path);
+        WRITE_TO_BUFFER(session, "Error getting status of '%s'\n", path);
         return 0;
     }
 
-    // Successfully changed directory, now store the new dir in full_dir if it still includes root_dir
-    // then return to original to maintain state
-    if (strncmp(session->root_dir, new_path, strlen(session->root_dir)) == 0)
+    if (!S_ISDIR(path_stat.st_mode))
     {
-        strcpy(session->full_dir, new_path);
-        strcpy(session->local_dir, new_path + strlen(session->root_dir));
-        // if session->local_dir is empty, set it to "/"
-        if (strlen(session->local_dir) == 0)
-        {
-            strcpy(session->local_dir, "/");
-        }
-        chdir(org_path);
-    }
-    else // we are no longer in the base directory
-    {
-        chdir(org_path);
-
-        WRITE_TO_BUFFER(session, "The waves are too rough to sail that far!\n");
+        WRITE_TO_BUFFER(session, "Sailing to '%s' doesn't really work\n", path);
         return 0;
     }
 
-    return 0;
+    // 3. Ensure the resolved path is within the root directory
+    if (strncmp(session->root_dir, resolved_path, strlen(session->root_dir)) != 0)
+    {
+        WRITE_TO_BUFFER(session, "You cannot sail beyond the seven seas (root directory)\n");
+        return 0;
+    }
+
+    // 4. Update the full_dir and local_dir if all checks pass
+    strcpy(session->full_dir, resolved_path);
+
+    // Calculate the local directory relative to the root directory
+    snprintf(session->local_dir, sizeof(session->local_dir), "%s", resolved_path + strlen(session->root_dir));
+
+    // Ensure local_dir starts with a '/'
+    if (session->local_dir[0] != '/')
+    {
+        char temp_dir[PATH_MAX];
+        snprintf(temp_dir, sizeof(temp_dir), "/%s", session->local_dir);
+        strcpy(session->local_dir, temp_dir);
+    }
+
+    WRITE_TO_BUFFER(session, "Set course for '%s'\n", session->local_dir);
+    return 1;
 }
 
 void cat_file(char *filename, session_t *session)
@@ -407,13 +440,10 @@ void cat_file(char *filename, session_t *session)
         {
             return;
         }
-
-        // Correct password was entered, so generate a new password for the next time
-        round++;
     }
 
     // Open and print the contents of the file
-    FILE *file = fopen(filename, "r");
+    FILE *file = fopen(file_path, "r");
     // print current directory
     if (file == NULL)
     {
@@ -427,6 +457,9 @@ void cat_file(char *filename, session_t *session)
     }
 
     fclose(file);
+
+    // Write newline for aesthetic reasons
+    WRITE_TO_BUFFER(session, "\n");
 }
 
 void help(session_t *session)

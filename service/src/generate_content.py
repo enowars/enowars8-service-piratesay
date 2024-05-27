@@ -72,18 +72,17 @@ visit_phrases = [
 ]
 
 # Function to generate a random date
-def random_date(start_year=2014, end_year=2022):
+def random_date(start_year=2014):
     start_date = datetime(year=start_year, month=1, day=1)
-    end_date = datetime(year=end_year, month=12, day=31)
+    end_date = datetime.now()
     random_days = random.randint(0, (end_date - start_date).days)
     return start_date + timedelta(days=random_days)
 
 # Function to generate a random time
 def random_time():
-    hour = random.randint(1, 12)
+    hour = random.randint(1, 23)
     minute = random.randint(0, 59)
-    period = random.choice(["AM", "PM"])
-    return f"{hour:02}:{minute:02} {period}"
+    return f"{hour:02}:{minute:02} UTC"
 
 # Function to generate a random string of 16 characters
 def random_string(length=16):
@@ -94,8 +93,8 @@ total_entries = 50
 
 # Clear existing directories and files
 for directory in directories:
-    if os.path.exists(directory):
-        shutil.rmtree(directory)
+    if os.path.exists("../data/" + directory):
+        shutil.rmtree("../data/" + directory)
 
 # Generate logs
 entries_left = total_entries
@@ -126,13 +125,13 @@ while entries_left > 0:
         visit_phrase = random.choice(visit_phrases)
 
         # Generate treasure for the last entry
-        if entries_left == 1:
-            scam = "I scavanged it all, except for the ship's old flag. It seemed useless, so I'll leave it for whoever comes next"
-            scammer_id = "ENOFLAG123456789"
-            greeting = "Ahoy mateys!"
-            farewell = "Yo-ho-ho and away we go!"
-            success_phrase = "and discovered a shipwreck full of treasure and rum!"
-            visit_phrase = "I stumbled upon"
+        # if entries_left == 1:
+        #     scam = "I scavanged it all, except for the ship's old flag. It seemed useless, so I'll leave it for whoever comes next"
+        #     scammer_id = "ENOFLAG123456789"
+        #     greeting = "Ahoy mateys!"
+        #     farewell = "Yo-ho-ho and away we go!"
+        #     success_phrase = "and discovered a shipwreck full of treasure and rum!"
+        #     visit_phrase = "I stumbled upon"
 
         # Create the log message
         message = (
@@ -148,10 +147,10 @@ while entries_left > 0:
 
         # Generate a unique filename
         scam_short = scam.replace(" ", "_")
-        if entries_left == 1:
-            file_name = f'../data/{directory}/{scammer.replace(" ", "_").lower()}_{"shipwreck"}.log'
-        else:
-            file_name = f'../data/{directory}/{scammer.replace(" ", "_").lower()}_{scam_short}.log'
+        # if entries_left == 1:
+        #     file_name = f'../data/{directory}/{scammer.replace(" ", "_").lower()}_{"shipwreck"}.treasure'
+        # else:
+        file_name = f'../data/{directory}/{scammer.replace(" ", "_").lower()}_{scam_short}_{date}_{time.replace(":", "").split(" ")[0]}.log'
         with open(file_name, "w") as file:
             file.write(message)
             print(f"Created log file: {file_name}")

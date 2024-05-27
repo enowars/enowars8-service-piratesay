@@ -6,5 +6,5 @@ OBJ = server.o cli.o session.o
 %.o: %.c $(DEPS)
 	$(CC) -c -o $@ $< $(CFLAGS)
 
-pirateprattle: $(OBJ)
+piratesay: $(OBJ)
 	$(CC) -o $@ $^ $(CFLAGS)

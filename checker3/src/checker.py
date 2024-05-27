@@ -4,6 +4,7 @@ import re
 import string
 import time
 from asyncio import StreamReader, StreamWriter
+from datetime import datetime, timedelta
 from logging import LoggerAdapter
 from typing import Optional
 
@@ -21,7 +22,7 @@ Checker config
 """
 
 SERVICE_PORT = 4444
-checker = Enochecker("pirateprattle", SERVICE_PORT)
+checker = Enochecker("piratesay", SERVICE_PORT)
 app = lambda: checker.app
 
 
@@ -34,9 +35,9 @@ class Connection:
         self.reader, self.writer = socket[0], socket[1]
         self.logger = logger
         
-    async def create_file(self, directory: str, filename: str, password: str, message: str, flag: str):
+    async def create_treasure(self, directory: str, filename: str, password: str, message: str, flag: str, timestamp: str):
         self.logger.debug(
-            f"Sending command to create file: {filename} in directory {directory} with message: {message}"
+            f"Sending command to create treasure: {filename} in directory {directory} with message: {message}"
         )
         # Go to the directory
         self.writer.write(f"sail {directory}\n".encode())
@@ -47,7 +48,7 @@ class Connection:
         await self.writer.drain()
         data = await self.reader.readuntil(b": ")
         # Write timestamp
-        self.writer.write(f"\n".encode())
+        self.writer.write(f"{timestamp}\n".encode())
         await self.writer.drain()
         data = await self.reader.readuntil(b": ")
         # Write password
@@ -61,6 +62,17 @@ class Connection:
 
         if not b"Treasure burried at" in data:
             raise MumbleException("Failed to create file")
+    
+
+    async def get_dirs(self):
+        # Send the command that lists directories
+        self.writer.write(b'scout\n')
+        await self.writer.drain()
+        
+        # Handle the output and wait for the directories listing
+        #   Excluding initial '.' and '..' and the last two (empty line and prompt)
+        directories = (await self.reader.readuntil(b"$ ")).decode().replace('\r', '').split('\n')[2:-2]
+        return directories
 
 
 
@@ -87,22 +99,42 @@ async def putflag_note(
     )
 
     # Log a message before any critical action that could raise an error.
-    logger.debug(f"Connecting to service")
-    logger.debug(f"enoflag is {task.flag}")
     welcome = await conn.reader.readuntil(b"$ ")
 
-    # Get the current time as (YYYY-MM-DD HH:MM AM/PM)
-    current_time = time.strftime("%Y-%m-%d %I:%M %p")
-    filename = f"flag{current_time.replace(' ', '_').replace(':', '')}"
+    # Extract name from last line of welcome message
+    name = welcome.decode().split("\n")[-1].split(":/")[0]
+    # split with _ instead of uppercase
+    name = re.sub(r'(?<=[a-z])(?=[A-Z])', '_', name).lower()
 
-    # Await create_file
-    await conn.create_file("PirateHideout", filename, password, "Hey there, this is the flag", task.flag)
+    # Get a random time as (YYYY-MM-DD HH:MM)
+    # Define the start and end dates
+    start_date = datetime(2014, 1, 1)
+    end_date = datetime.now()
+
+    # Generate a random time between the start and end dates
+    random_time = start_date + timedelta(days=random.randint(0, (end_date - start_date).days),
+                                        hours=random.randint(0, 23),
+                                        minutes=random.randint(0, 59))
+    # convert to string with format YYYY-MM-DD HH:MM
+    random_time = random_time.strftime("%Y-%m-%d %H:%M")
+    filename = f"{name}_found_shipwreck_{random_time.replace(' ', '_').replace(':', '')}"
+
+    # Get the directories and pick one at random
+    directories = await conn.get_dirs()
+    directory = random.choice(directories)
+
+    message = f"""Ahoy mateys! I stumbled upon {directory} and 
+    discovered a shipwreck full of treasure and rum! I scavanged it all, 
+    except for the ship's old flag. It seemed useless, so I'll leave it for 
+    whoever comes next. Yo-ho-ho and away we go!"""
+
+    # Await create_treasure
+    await conn.create_treasure(directory, filename, password, message, task.flag, random_time)
 
     # Save as an entry in the db for getflag() to use later.
-    await db.set("treasurefile", ("PirateHideout", filename, password, task.flag))
+    await db.set("treasurefile", (directory, filename, password, task.flag))
 
     # Exit
-    logger.debug(f"Sending exit command")
     conn.writer.write(f"dock".encode())
     await conn.writer.drain()
 
@@ -115,7 +147,6 @@ async def getflag_note(
     except KeyError:
         raise MumbleException("Missing database entry from putflag")
 
-    logger.debug(f"Connecting to the service")
     logger.debug(f"File info: {directory}/{filename} with password {password} and flag {flag}")
     await conn.reader.readuntil(b"$ ")
 
@@ -139,25 +170,16 @@ async def getflag_note(
             raise MumbleException(f"Couldn't find the flag {flag} in {directory}/{filename}")
 
     # Exit!
-    logger.debug(f"Sending exit command")
     conn.writer.write(f"dock\n".encode())
     await conn.writer.drain()
 
 @checker.exploit(0)
 async def exploit0(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn: Connection, logger: LoggerAdapter) -> Optional[str]:
 
-    
-    # Start the telnet session
     await conn.reader.readuntil(b"$ ")
-
-    # Send the command that lists directories
-    conn.writer.write(b'scout\n')
-    await conn.writer.drain()
     
-    # Handle the output and wait for the directories listing
-    #   Excluding initial '.' and '..' and the last two (empty line and prompt)
-    directories = (await conn.reader.readuntil(b"$ ")).decode().replace('\r', '').split('\n')[2:-2]
-    # directories = [directory for directory in directories_output if len(re.findall(r'[A-Z]', directory)) == 2]
+    # Get the directories
+    directories = await conn.get_dirs()
     logger.debug(f"Directories output: {directories}")
 
     treasure_dir = ""
@@ -181,6 +203,10 @@ async def exploit0(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn
                     break
             treasure_file = scout_output[treasure_line_idx]
             break
+    
+    # if treasure_dir is still empty, report mumble exception
+    if treasure_dir == "" or treasure_file == "":
+        raise MumbleException("No .treasure file found")
 
     # Change to the directory and loot the treasure
     conn.writer.write(f'sail {treasure_dir}\n'.encode())
