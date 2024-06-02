@@ -219,29 +219,30 @@ void main()
 
     // Accept incoming connections
     puts("Waiting for incoming connections...");
+
     while ((client_sock = accept(server_fd, (struct sockaddr *)&client, &socksize)))
     {
         printf("Connection accepted from %s:%d\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
 
-        pthread_t sniffer_thread;
-        new_sock = malloc(sizeof(int));
-        *new_sock = client_sock;
-
-        if (pthread_create(&sniffer_thread, NULL, client_session, (void *)new_sock) < 0)
+        pid_t pid = fork();
+        if (pid < 0)
         {
-            perror("could not create thread");
-            free(new_sock);
-            continue; // Continue to accept new connections even if thread creation fails
+            perror("fork failed");
+            close(client_sock);
+            continue;
         }
-
-        // Optionally detach the thread
-        pthread_detach(sniffer_thread);
-    }
-
-    if (client_sock < 0)
-    {
-        perror("accept failed");
-        close(server_fd);
-        exit(EXIT_FAILURE); // Exit if accept fails
+        else if (pid == 0)
+        {
+            // This is the child process
+            close(server_fd);             // Child does not need the listening socket
+            client_session(&client_sock); // Handle client connection
+            close(client_sock);
+            exit(EXIT_SUCCESS); // End child process
+        }
+        else
+        {
+            // This is the parent process
+            close(client_sock); // Parent does not need the client socket
+        }
     }
 }
