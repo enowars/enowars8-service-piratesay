@@ -10,9 +10,6 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <time.h>
-#include <pthread.h>
-
-pthread_mutex_t file_mutex = PTHREAD_MUTEX_INITIALIZER;
 
 // Define the macro for formatting messages into the session buffer
 #define WRITE_TO_BUFFER(session, format, ...)                   \
@@ -208,10 +205,6 @@ int interact_cli(session_t *session)
             sprintf(scam_filename, "%s.log", scam_filename);
         }
 
-        // Lock the mutex before entering file creation critical section
-        //  (important to lock before we check if a file with this path already exists)
-        pthread_mutex_lock(&file_mutex);
-
         // Get absolute path
         char absolute_path[PATH_MAX];
         snprintf(absolute_path, sizeof(absolute_path), "%s/%s", session->full_dir, scam_filename);
@@ -220,7 +213,6 @@ int interact_cli(session_t *session)
         {
             // File exists
             WRITE_TO_BUFFER(session, "Something is already burried at '%s'\n", scam_filename);
-            pthread_mutex_unlock(&file_mutex);
             return 0;
         }
 
@@ -230,7 +222,6 @@ int interact_cli(session_t *session)
         if (scam_file == NULL)
         {
             WRITE_TO_BUFFER(session, "Couldn't bury the treasure\n");
-            pthread_mutex_unlock(&file_mutex);
             return 0;
         }
         // Write the scam details to the file
@@ -238,8 +229,6 @@ int interact_cli(session_t *session)
         fclose(scam_file);
 
         WRITE_TO_BUFFER(session, "Treasure burried at '%s'\n", scam_filename);
-
-        pthread_mutex_unlock(&file_mutex);
     }
     else if (strncmp(command, "loot", 255) == 0)
     {

@@ -25,15 +25,16 @@
 - [ ] Test a whole bunch to make sure there aren't unwanted exploits. Questions so far:
 
   - [x] How to prevent %n exploit that can change the actual password for the first exploit. This might be bad if it inferes and ruins the experience for the other groups as they can then no longer use the intended exploit.
-  - [ ] Prevent any occurances of % followed by n, regardless of how (like %1$n).
-  - [ ] To prevent segfaults, look into spawning separate processes that it's okay if segfaults.
+  - [x] Prevent any occurances of % followed by n, regardless of how (like %1$n).
+    - [ ] Check behavior of things like `%fdsa%n %p` with several % (seems to print a different value for %p than `fdsa%n %p` for example)
+  - [x] To prevent segfaults, look into spawning separate processes that it's okay if segfaults.
   - [ ] Look into race conditions Bennett mentioned? (I think it wouldn't really cause an issue, as it's if anything just more conservative (both checks ahead of time and also gives error when trying to read if not working).
   - [ ] **Start using project board on Github instead!**
   - [x] How to prevent arbitrary code execution if the attacker can write an address to the stack and store values in it (Solution: Assuming solved since %n isn't allowed now)
   - [ ] How to solve the potential is_admin problem for the checker. How would it verify itself? (random credentials each round that are cryptographically safe?)
   - [ ] General removel of all warnings and mis-matching of buffer sizes etc. Just use PATH_MAX for everything basically?
   - [x] Implement locks to prevent race conditions and find out how to deal with a potential issue: User 1 is typing in password to open a file while user 2 is changing dir.
-    - [ ] NB: Need to test more if concurrent reads can cause issues. Just implement another mutex if that's the case!
+    - [ ] NB: Need to test more if concurrent reads can cause issues now that we have multiple processes.
 
 ### For fun if time
 

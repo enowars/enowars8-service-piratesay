@@ -8,7 +8,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
-#include <signal.h> // Include signal handling
+#include <signal.h>
 
 #define PORT 4444
 
@@ -24,30 +24,33 @@ void handle_sigint(int sig)
 
 void sanitize_string(char *input)
 {
-
     char buffer[PATH_MAX];
     char *insert_point = buffer;
     const char *tmp = input;
-    size_t target_len = 2;
 
     while (*tmp)
     {
-        const char *p = strstr(tmp, "%n");
-
-        if (p == NULL)
+        // Look for the next '%'
+        if (*tmp == '%')
         {
-            // None found, copy all
-            strcpy(insert_point, tmp);
-            insert_point += strlen(insert_point);
-            break;
+            const char *p = tmp + 1;
+            // Scan until we find an 'n'
+            while (*p && *p != 'n')
+            {
+                p++;
+            }
+
+            // If we found an 'n'
+            if (*p == 'n')
+            {
+                // Skip the pattern
+                tmp = p + 1;
+                continue;
+            }
         }
 
-        // Copy part of the string before the target
-        memcpy(insert_point, tmp, p - tmp);
-        insert_point += p - tmp;
-
-        // Skip the target string
-        tmp = p + target_len;
+        // Copy the current character and move to the next
+        *insert_point++ = *tmp++;
     }
 
     // Null-terminate the buffer
@@ -100,10 +103,9 @@ void print_terminal_prompt(session_t *session)
     send(session->sock, dir_message, strlen(dir_message), 0);
 }
 
-void *client_session(void *socket_desc)
+void client_session(int *socket_desc)
 {
-    int sock = *(int *)socket_desc;
-    free(socket_desc);
+    int sock = *socket_desc;
 
     session_t session;
     session.sock = sock;
@@ -155,16 +157,11 @@ void *client_session(void *socket_desc)
     }
 
     close(sock);
-    return NULL; // Correct return type for pthread function
 }
 
-void main()
+int main()
 {
-    // Seed the random number generator with the current time
-    srand(time(NULL));
-
     // get dir and change it to 'data' subfolder
-
     if (chdir("../data") != 0)
     {
         perror("'data' subfolder necessary to run the server\n");
@@ -172,7 +169,7 @@ void main()
     }
     getcwd(root_dir, sizeof(root_dir));
 
-    int client_sock, *new_sock;
+    int client_sock;
     struct sockaddr_in server, client;
     socklen_t socksize = sizeof(struct sockaddr_in);
 
@@ -220,7 +217,7 @@ void main()
     // Accept incoming connections
     puts("Waiting for incoming connections...");
 
-    while ((client_sock = accept(server_fd, (struct sockaddr *)&client, &socksize)))
+    while ((client_sock = accept(server_fd, (struct sockaddr *)&client, &socksize)) >= 0)
     {
         printf("Connection accepted from %s:%d\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
 
@@ -234,6 +231,8 @@ void main()
         else if (pid == 0)
         {
             // This is the child process
+            // Seed the random number generator with the current time (unique for each child)
+            srand(time(NULL));
             close(server_fd);             // Child does not need the listening socket
             client_session(&client_sock); // Handle client connection
             close(client_sock);
@@ -245,4 +244,13 @@ void main()
             close(client_sock); // Parent does not need the client socket
         }
     }
+
+    if (client_sock < 0)
+    {
+        perror("accept failed");
+        close(server_fd);
+        exit(EXIT_FAILURE);
+    }
+
+    return 0;
 }
