@@ -421,12 +421,12 @@ void cat_file(char *filename, session_t *session)
         password_input[read_size] = '\0';
         trim_whitespace(password_input);
         fflush(stdout);
-        WRITE_TO_BUFFER(session, password_input);
-        WRITE_TO_BUFFER(session, ", ");
-        WRITE_TO_BUFFER(session, password_input);
-        WRITE_TO_BUFFER(session, ", captain!\n");
         if (strncmp(password_input, correct_password, 255) != 0)
         {
+            // Parrot feedback
+            char feedback[1024];
+            snprintf(feedback, sizeof(feedback), "%s is wrong, %s is wrong, captain!\n", password_input, password_input);
+            WRITE_TO_BUFFER(session, feedback);
             return;
         }
     }
