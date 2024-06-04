@@ -1,5 +1,5 @@
 # Use https://gitignore.io/ to create a suitable .gitignore file for your project.
-data/**/*
+# data/**/*
 
 # Prerequisites
 *.d
