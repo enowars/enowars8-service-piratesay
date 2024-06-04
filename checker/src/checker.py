@@ -234,7 +234,7 @@ async def exploit0(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn
             incorrect_message = (await conn.reader.readuntil(b"$ ")).decode()
 
             # Extract the two addresses from the incorrect message
-            address1_hex, address2_hex = incorrect_message.split(',')[0].split('.')
+            address1_hex, address2_hex = incorrect_message.split(' ')[0].split('.')
 
             # Convert the addresses to ASCII and reverse them
             address1 = bytes.fromhex(address1_hex).decode()[::-1]
