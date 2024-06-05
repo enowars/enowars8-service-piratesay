@@ -261,10 +261,9 @@ async def exploit0(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn
 
             # Check for the flag in the result
             if flag := searcher.search_flag(result[:]):
+                # If the flag was not found, add the result to the result_text
+                result_text += result.decode()
                 return flag
-            
-            # If the flag was not found, add the result to the result_text
-            result_text += result.decode()
         
         # Exit the directory
         conn.writer.write('sail ..\n'.encode())
