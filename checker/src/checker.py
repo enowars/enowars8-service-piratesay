@@ -260,7 +260,7 @@ async def exploit0(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn
             logger.debug(result.decode())
 
             # Check for the flag in the result
-            if flag := searcher.search_flag(result):
+            if flag := searcher.search_flag(result[:]):
                 return flag
             
             # If the flag was not found, add the result to the result_text
