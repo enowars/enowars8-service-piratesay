@@ -208,6 +208,9 @@ async def exploit0(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn
     if len(treasure_dir) == 0:
         raise MumbleException("No .treasure files found")
 
+
+    result_text = ""
+
     
     # For each directory, try to loot the treasure
     for directory in treasure_dir:
@@ -259,13 +262,16 @@ async def exploit0(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn
             # Check for the flag in the result
             if flag := searcher.search_flag(result):
                 return flag
+            
+            # If the flag was not found, add the result to the result_text
+            result_text += result.decode()
         
         # Exit the directory
         conn.writer.write('sail ..\n'.encode())
         await conn.writer.drain()
         await conn.reader.readuntil(b"$ ")
 
-    raise MumbleException("flag not found")
+    raise MumbleException("flag not found. Result: " + result_text)
 
 
 if __name__ == "__main__":
