@@ -9,6 +9,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <signal.h>
+#include <sys/wait.h>
 
 #define PORT 4444
 
@@ -20,6 +21,15 @@ void handle_sigint(int sig)
     printf("Caught signal %d, releasing resources...\n", sig);
     close(server_fd); // Close the server socket
     exit(0);          // Exit the program
+}
+
+void handle_sigchld(int sig)
+{
+    // Use a loop to handle all terminated child processes
+    while (waitpid(-1, NULL, WNOHANG) > 0)
+    {
+        // No need to do anything here, just reap the child processes
+    }
 }
 
 void sanitize_string(char *input)
@@ -207,12 +217,18 @@ int main()
     // Listen
     listen(server_fd, 3);
 
-    // Set up the signal handler for SIGINT
-    struct sigaction sa;
-    sa.sa_handler = handle_sigint;
-    sa.sa_flags = 0;
-    sigemptyset(&sa.sa_mask);
-    sigaction(SIGINT, &sa, NULL);
+    // Set up the signal handlers
+    struct sigaction sa_int, sa_chld;
+
+    sa_int.sa_handler = handle_sigint;
+    sa_int.sa_flags = 0;
+    sigemptyset(&sa_int.sa_mask);
+    sigaction(SIGINT, &sa_int, NULL);
+
+    sa_chld.sa_handler = handle_sigchld;
+    sa_chld.sa_flags = SA_RESTART | SA_NOCLDSTOP;
+    sigemptyset(&sa_chld.sa_mask);
+    sigaction(SIGCHLD, &sa_chld, NULL);
 
     // Accept incoming connections
     puts("Waiting for incoming connections...");

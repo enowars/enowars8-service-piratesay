@@ -153,7 +153,10 @@ async def getflag_treasure(
         raise MumbleException(f"Missing database entry from putflag")
 
     logger.debug(f"File info: {directory}/{filename} with password {password}. Looking for {task.flag}")
-    await conn.reader.readuntil(b"$ ")
+    welcome = await conn.reader.readuntil(b"$ ")
+
+    logger.debug (f"Welcome message: {welcome}")
+    ## TODO CHECK OUT THIS MESSAGE
 
     # Go to the directory
     conn.writer.write(f"sail {directory}\n".encode())
