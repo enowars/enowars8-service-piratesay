@@ -86,7 +86,7 @@ CHECKER FUNCTIONS
 """
 
 @checker.putflag(0)
-async def putflag_note(
+async def putflag_treasure(
     task: PutflagCheckerTaskMessage,
     db: ChainDB,
     conn: Connection,
@@ -132,7 +132,7 @@ async def putflag_note(
     await conn.create_treasure(directory, filename, password, message, task.flag, random_time)
 
     # Save as an entry in the db for getflag() to use later.
-    await db.set(task.flag, (directory, filename, password, task.flag))
+    await db.set("flagdata", (directory, filename, password, task.flag))
 
     # Exit
     conn.writer.write(f"dock".encode())
@@ -142,13 +142,13 @@ async def putflag_note(
     return f"{directory}/{filename}.treasure"
 
 @checker.getflag(0)
-async def getflag_note(
+async def getflag_treasure(
     task: GetflagCheckerTaskMessage, db: ChainDB, logger: LoggerAdapter, conn: Connection
 ) -> None:
     
     logger.debug("Getting flag: " + task.flag)
     try:
-        directory, filename, password, flag = await db.get(task.flag)
+        directory, filename, password, flag = await db.get("flagdata")
     except KeyError:
         raise MumbleException(f"Missing database entry for {task.flag} from putflag")
 
