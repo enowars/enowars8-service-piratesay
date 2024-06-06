@@ -5,11 +5,14 @@ set -x
 # Chown the mounted data volume
 chown -R service:service "/data/"
 
-# Force the deletion script to run once
-/usr/local/bin/delete_old_files.sh
+# Create the necessary directories
+./create_directories.sh
+
+# Force the deletion script to run once using a relative path
+./delete_old_files.sh
 
 # Start cron service
-service cron start
+cron
 
 # Build the project
 make
