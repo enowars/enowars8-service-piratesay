@@ -17,7 +17,7 @@
              sizeof(session->buffer) - strlen(session->buffer), \
              format, ##__VA_ARGS__)
 
-void generate_password(char *password, size_t length)
+void generate_custom_id(char *password, size_t length)
 {
     // Define the characters that we want to use in our password
     char characters[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$^&*()";
@@ -85,7 +85,7 @@ int interact_cli(session_t *session)
             {
                 strcpy(file_path, argument1 + 1);
                 trim_whitespace(file_path);
-                generate_password(custom_ID, 16);
+                generate_custom_id(custom_ID, 16);
             }
         }
 
