@@ -186,6 +186,9 @@ async def exploit0(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn
 
     logger.debug(f"Exploiting: {task.attack_info}" )
 
+    if not task.attack_info:
+        raise MumbleException("No attack info provided")
+
     treasure_dir, treasure_file = task.attack_info.split('/')
     
     await conn.reader.readuntil(b"$ ")
@@ -234,13 +237,7 @@ async def exploit0(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn
     if flag := searcher.search_flag(result):
         return flag
 
-    # Exit the directory
-    conn.writer.write('sail ..\n'.encode())
-    await conn.writer.drain()
-    await conn.reader.readuntil(b"$ ")
-
     raise MumbleException("flag not found")
-
 
 if __name__ == "__main__":
     checker.run()
