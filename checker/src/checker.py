@@ -260,17 +260,18 @@ async def exploit0(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn
             logger.debug(result.decode())
 
             # Check for the flag in the result
-            if flag := searcher.search_flag(result[:]):
-                # If the flag was not found, add the result to the result_text
-                result_text += result.decode()
+            if flag := searcher.search_flag(result):
                 return flag
+            
+            # If the flag was not found, add the result to the result_text
+            result_text += result.decode()
         
         # Exit the directory
         conn.writer.write('sail ..\n'.encode())
         await conn.writer.drain()
         await conn.reader.readuntil(b"$ ")
 
-    raise MumbleException("flag not found. Result: " + result_text)
+    raise MumbleException("flag not found. Output: " + result_text)
 
 
 if __name__ == "__main__":

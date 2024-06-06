@@ -80,7 +80,6 @@ int interact_cli(session_t *session)
                 file_path[argument2 - argument1 - 1] = '\0';
                 strcpy(custom_ID, argument2 + 1);
                 trim_whitespace(file_path);
-                trim_whitespace(custom_ID);
             }
             else
             {
