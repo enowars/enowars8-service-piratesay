@@ -9,6 +9,7 @@ from logging import LoggerAdapter
 from typing import Optional
 
 import faker
+import generate_content
 from enochecker3 import (AsyncSocket, BaseCheckerTaskMessage, ChainDB,
                          Enochecker, ExploitCheckerTaskMessage, FlagSearcher,
                          GetflagCheckerTaskMessage, GetnoiseCheckerTaskMessage,
@@ -34,6 +35,34 @@ class Connection:
     def __init__(self, socket: AsyncSocket, logger: LoggerAdapter):
         self.reader, self.writer = socket[0], socket[1]
         self.logger = logger
+
+    async def create_log(self, directory: str, filename: str, message: str, timestamp: str):
+        self.logger.debug(
+            f"Sending command to create log: {filename} in directory {directory} with message: {message}"
+        )
+        # Go to the directory
+        self.writer.write(f"sail {directory}\n".encode())
+        await self.writer.drain()
+        data = await self.reader.readuntil(b"$ ")
+        # Create the file
+        self.writer.write(f"bury {filename}\n".encode())
+        await self.writer.drain()
+        data = await self.reader.readuntil(b": ")
+        # Write timestamp
+        self.writer.write(f"{timestamp}\n".encode())
+        await self.writer.drain()
+        data = await self.reader.readuntil(b": ")
+        # Write blank password
+        self.writer.write(f"\n".encode())
+        await self.writer.drain()
+        data = await self.reader.readuntil(b": ")
+        # Write message
+        self.writer.write(f"{message}\n".encode())
+        await self.writer.drain()
+        data = await self.reader.readuntil(b"$ ")
+
+        if not b"Burried at" in data:
+            raise MumbleException("Failed to create log file")
         
     async def create_treasure(self, directory: str, filename: str, password: str, message: str, flag: str, timestamp: str):
         self.logger.debug(
@@ -60,8 +89,8 @@ class Connection:
         await self.writer.drain()
         data = await self.reader.readuntil(b"$ ")
 
-        if not b"Treasure burried at" in data:
-            raise MumbleException("Failed to create file")
+        if not b"Burried at" in data:
+            raise MumbleException("Failed to create treasure file")
     
 
     async def get_dirs(self):
@@ -92,8 +121,6 @@ async def putflag_treasure(
     conn: Connection,
     logger: LoggerAdapter,    
 ) -> None:
-    
-    # password = "AAAAAAAAAAAAAAAA" # For testing
     
     password: str = "".join(
         random.choices(string.ascii_uppercase + string.digits, k=16)
@@ -154,10 +181,7 @@ async def getflag_treasure(
         raise MumbleException(f"Missing database entry from putflag")
 
     logger.debug(f"File info: {directory}/{filename} with password {password}. Looking for {task.flag}")
-    welcome = await conn.reader.readuntil(b"$ ")
-
-    logger.debug (f"Welcome message: {welcome}")
-    ## TODO CHECK OUT THIS MESSAGE
+    await conn.reader.readuntil(b"$ ")
 
     # Go to the directory
     conn.writer.write(f"sail {directory}\n".encode())
@@ -239,7 +263,47 @@ async def exploit0(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn
     if flag := searcher.search_flag(result):
         return flag
 
-    raise MumbleException(f"flag not found lizzom! Searched through: {treasure_dir}/{treasure_file} and found: {result.decode()} with password: {password} and pointers: {address1_hex} & {address2_hex}" )
+    raise MumbleException(f"flag not found during exploit")
+
+
+@checker.putnoise(0)
+async def putnoise0(task: PutnoiseCheckerTaskMessage, db: ChainDB, logger: LoggerAdapter, conn: Connection):
+
+    # Log a message before any critical action that could raise an error.
+    welcome = await conn.reader.readuntil(b"$ ")
+
+    directory, filename, message, timestamp = generate_content.generate_noise_entries()
+
+    # Await create_log
+    await conn.create_log(directory, filename, message, timestamp)
+
+    # Save as an entry in the db for getnoise() to use later.
+    await db.set("noisedata", (directory, filename, message))
+
+@checker.getnoise(0)
+async def getnoise0(task: GetnoiseCheckerTaskMessage, db: ChainDB, logger: LoggerAdapter, conn: Connection):
+    
+    try:
+        directory, filename, message = await db.get("noisedata")
+    except KeyError:
+        raise MumbleException(f"Missing database entry from putnoise")
+
+    logger.debug(f"File info: {directory}/{filename}. Looking for message {message}")
+    await conn.reader.readuntil(b"$ ")
+
+    # Go to the directory
+    conn.writer.write(f"sail {directory}\n".encode())
+    await conn.writer.drain()
+    await conn.reader.readuntil(b"$ ")
+
+    # Open the file
+    conn.writer.write(f"loot {filename}.log\n".encode())
+    await conn.writer.drain()
+    content = await conn.reader.readuntil(b"$ ")
+
+    # Check if the flag is in the file
+    if not f"{message}".encode() in content:
+        raise MumbleException(f"Couldn't find the given message in {directory}/{filename}")
 
 if __name__ == "__main__":
     checker.run()

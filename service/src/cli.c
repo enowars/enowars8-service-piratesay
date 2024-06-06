@@ -220,14 +220,14 @@ int interact_cli(session_t *session)
         FILE *scam_file = fopen(absolute_path, "w");
         if (scam_file == NULL)
         {
-            WRITE_TO_BUFFER(session, "Couldn't bury the treasure\n");
+            WRITE_TO_BUFFER(session, "Unable to bury\n");
             return 0;
         }
         // Write the scam details to the file
         fprintf(scam_file, "%s", content);
         fclose(scam_file);
 
-        WRITE_TO_BUFFER(session, "Treasure burried at '%s'\n", scam_filename);
+        WRITE_TO_BUFFER(session, "Burried at '%s'\n", scam_filename);
     }
     else if (strncmp(command, "loot", 255) == 0)
     {
