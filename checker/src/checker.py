@@ -237,7 +237,7 @@ async def exploit0(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn
     if flag := searcher.search_flag(result):
         return flag
 
-    raise MumbleException(f"flag not found lizzom! Searched through: {treasure_dir}/{treasure_file} and found: {result.decode()} with password: {password}" )
+    raise MumbleException(f"flag not found lizzom! Searched through: {treasure_dir}/{treasure_file} and found: {result.decode()} with password: {password} and pointers: {address1_hex} & {address2_hex}" )
 
 if __name__ == "__main__":
     checker.run()
