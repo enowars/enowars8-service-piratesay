@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# Get the directory of the current script
+script_dir="$(cd "$(dirname "$0")" && pwd)"
+
 # List of directories to create
 directories=(
     "BlackbeardCove"
@@ -19,8 +22,8 @@ directories=(
     "GalleonGraveyard"
 )
 
-# Base directory
-base_dir="/data"
+# Base directory (relative to the script directory)
+base_dir="$script_dir/data"
 
 # Create directories if they don't exist
 for dir in "${directories[@]}"; do
