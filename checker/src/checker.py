@@ -139,7 +139,7 @@ async def putflag_note(
     await conn.writer.drain()
 
     # Store the file in attack_info
-    return f"{directory} {filename}.treasure"
+    return f"{directory}/{filename}.treasure"
 
 @checker.getflag(0)
 async def getflag_note(
@@ -152,7 +152,7 @@ async def getflag_note(
     except KeyError:
         raise MumbleException(f"Missing database entry for {task.flag} from putflag")
 
-    logger.debug(f"File info: {directory}/{filename} with password {password} and flag {flag}")
+    logger.debug(f"File info: {directory}/{filename} with password {password} and flag {flag} for {task.flag}")
     await conn.reader.readuntil(b"$ ")
 
     # Go to the directory
@@ -179,13 +179,12 @@ async def getflag_note(
     await conn.writer.drain()
 
 
-# Note: Currently very slow as it doesn't know which file contains the given flag, and will therefore exploit all treasure files
 @checker.exploit(0)
 async def exploit0(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn: Connection, logger: LoggerAdapter) -> Optional[str]:
 
     logger.debug(f"Exploiting: {task.attack_info}" )
 
-    treasure_dir, treasure_file = task.attack_info.split(' ')
+    treasure_dir, treasure_file = task.attack_info.split('/')
     
     await conn.reader.readuntil(b"$ ")
     
