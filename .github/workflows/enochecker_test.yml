@@ -29,7 +29,7 @@ jobs:
           pip install enochecker-test
       - name: Clean up Docker images
         run: |
-          docker-compose -f service/docker-compose.yaml down --rmi all
+          docker-compose -f service/docker-compose.yml down --rmi all
           docker-compose -f checker/docker-compose.yaml down --rmi all
       - name: start service
         run: |
