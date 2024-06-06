@@ -150,7 +150,7 @@ async def getflag_treasure(
     try:
         directory, filename, password, flag = await db.get("flagdata")
     except KeyError:
-        raise MumbleException(f"Missing database entry for {task.flag} from putflag")
+        raise MumbleException(f"Missing database entry from putflag")
 
     logger.debug(f"File info: {directory}/{filename} with password {password} and flag {flag} for {task.flag}")
     await conn.reader.readuntil(b"$ ")
@@ -172,7 +172,7 @@ async def getflag_treasure(
 
     # Check if the flag is in the file
     if not f"{flag}".encode() in data:
-            raise MumbleException(f"Couldn't find the flag {flag} in {directory}/{filename}")
+            raise MumbleException(f"Couldn't find the flag in {directory}/{filename}")
 
     # Exit!
     conn.writer.write(f"dock\n".encode())
