@@ -92,8 +92,7 @@ async def putflag_treasure(
     conn: Connection,
     logger: LoggerAdapter,    
 ) -> None:
-    # Creating a file in the PirateHideout directory and storing the flag in the db
-
+    
     password: str = "".join(
         random.choices(string.ascii_uppercase + string.digits, k=16)
     )
