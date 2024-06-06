@@ -26,6 +26,27 @@ SERVICE_PORT = 4444
 checker = Enochecker("piratesay", SERVICE_PORT)
 app = lambda: checker.app
 
+# List of pirate-themed directory names
+directories = [
+    "BlackbeardCove",
+    "TreasureIsland",
+    "SkullAndBonesReef",
+    "DeadMansBay",
+    "JollyRogersHarbor",
+    "BuccaneerBeach",
+    "PirateHideout",
+    "CutthroatCreek",
+    "SirenShores",
+    "CorsairCastle",
+    "WickedWaters",
+    "MaroonersLagoon",
+    "ParrotPerch",
+    "RumRunnersRidge",
+    "GalleonGraveyard"
+]
+
+def get_random_dir_locally():
+    return random.choice(directories)
 
 """
 Utility functions
@@ -93,6 +114,8 @@ class Connection:
             raise MumbleException("Failed to create treasure file")
     
 
+    # This communicates instead of picking from the list
+    # Slower, so won't be using
     async def get_dirs(self):
         # Send the command that lists directories
         self.writer.write(b'scout\n')
@@ -147,9 +170,8 @@ async def putflag_treasure(
     random_time = random_time.strftime("%Y-%m-%d %H:%M")
     filename = f"{name}_found_shipwreck_{random_time.replace(' ', '_').replace(':', '')}"
 
-    # Get the directories and pick one at random
-    directories = await conn.get_dirs()
-    directory = random.choice(directories)
+    # Get a random directory
+    directory = get_random_dir_locally()
 
     message = f"""Ahoy mateys! I stumbled upon {directory} and 
     discovered a shipwreck full of treasure and rum! I scavanged it all, 
@@ -269,10 +291,18 @@ async def exploit0(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn
 @checker.putnoise(0)
 async def putnoise0(task: PutnoiseCheckerTaskMessage, db: ChainDB, logger: LoggerAdapter, conn: Connection):
 
-    # Log a message before any critical action that could raise an error.
+    # Extract name from last line of welcome message
     welcome = await conn.reader.readuntil(b"$ ")
+    scammer_name = welcome.decode().split("\n")[-1].split(":/")[0]
+    # split with _ instead of uppercase
+    scammer_name = re.sub(r'(?<=[a-z])(?=[A-Z])', '_', scammer_name).lower()
 
-    directory, filename, message, timestamp = generate_content.generate_noise_entries()
+    # Get a random directory
+    directory = get_random_dir_locally()
+
+    filename, message, timestamp = generate_content.generate_noise_entries(directory, scammer_name)
+
+    logger.debug(f"Generated noise: {directory}/{filename} with message {message}")
 
     # Await create_log
     await conn.create_log(directory, filename, message, timestamp)

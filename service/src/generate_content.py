@@ -96,65 +96,60 @@ for directory in directories:
     if os.path.exists("../data/" + directory):
         shutil.rmtree("../data/" + directory)
 
-# Generate logs
-entries_left = total_entries
-while entries_left > 0:
-    for directory in directories:
-        if entries_left == 0:
-            break
-
-        # Create the directory if it doesn't exist
-        if not os.path.exists("../data/" + directory):
-            os.makedirs("../data/" + directory)
+# Generate directories
+for directory in directories:
+    # Create the directory if it doesn't exist
+    if not os.path.exists("../data/" + directory):
+        os.makedirs("../data/" + directory)
         
-        # 50 percent chance to skip creating a log in this directory for this iteration
-        if random.random() < 0.5:
-            continue
+#         # 50 percent chance to skip creating a log in this directory for this iteration
+#         if random.random() < 0.5:
+#             continue
 
-        # Select random elements for the log
-        scam = random.choice(scams)
-        adjective = random.choice(pirate_adjectives)
-        noun = random.choice(pirate_nouns)
-        date = random_date().strftime("%Y-%m-%d")
-        time = random_time()
-        scammer = f"{adjective} {noun}"
-        scammer_id = random_string()
-        greeting = random.choice(greetings)
-        farewell = random.choice(farewells)
-        success_phrase = random.choice(success_phrases)
-        visit_phrase = random.choice(visit_phrases)
+#         # Select random elements for the log
+#         scam = random.choice(scams)
+#         adjective = random.choice(pirate_adjectives)
+#         noun = random.choice(pirate_nouns)
+#         date = random_date().strftime("%Y-%m-%d")
+#         time = random_time()
+#         scammer = f"{adjective} {noun}"
+#         scammer_id = random_string()
+#         greeting = random.choice(greetings)
+#         farewell = random.choice(farewells)
+#         success_phrase = random.choice(success_phrases)
+#         visit_phrase = random.choice(visit_phrases)
 
-        # Generate treasure for the last entry
-        # if entries_left == 1:
-        #     scam = "I scavanged it all, except for the ship's old flag. It seemed useless, so I'll leave it for whoever comes next"
-        #     scammer_id = "ENOFLAG123456789"
-        #     greeting = "Ahoy mateys!"
-        #     farewell = "Yo-ho-ho and away we go!"
-        #     success_phrase = "and discovered a shipwreck full of treasure and rum!"
-        #     visit_phrase = "I stumbled upon"
+#         # Generate treasure for the last entry
+#         # if entries_left == 1:
+#         #     scam = "I scavanged it all, except for the ship's old flag. It seemed useless, so I'll leave it for whoever comes next"
+#         #     scammer_id = "ENOFLAG123456789"
+#         #     greeting = "Ahoy mateys!"
+#         #     farewell = "Yo-ho-ho and away we go!"
+#         #     success_phrase = "and discovered a shipwreck full of treasure and rum!"
+#         #     visit_phrase = "I stumbled upon"
 
-        # Create the log message
-        message = (
-            f"Scam Details:\n"
-            f"----------------\n"
-            f"Date: {date}\n"
-            f"Time: {time}\n"
-            f"Scammer: {scammer}\n"
-            f"Scammer ID: {scammer_id}\n\n"
-            f"Message: {greeting} {visit_phrase} {directory} {success_phrase} {scam}. {farewell}"
-        )
+#         # Create the log message
+#         message = (
+#             f"Scam Details:\n"
+#             f"----------------\n"
+#             f"Date: {date}\n"
+#             f"Time: {time}\n"
+#             f"Scammer: {scammer}\n"
+#             f"Scammer ID: {scammer_id}\n\n"
+#             f"Message: {greeting} {visit_phrase} {directory} {success_phrase} {scam}. {farewell}"
+#         )
 
 
-        # Generate a unique filename
-        scam_short = scam.replace(" ", "_")
-        # if entries_left == 1:
-        #     file_name = f'../data/{directory}/{scammer.replace(" ", "_").lower()}_{"shipwreck"}.treasure'
-        # else:
-        file_name = f'../data/{directory}/{scammer.replace(" ", "_").lower()}_{scam_short}_{date}_{time.replace(":", "").split(" ")[0]}.log'
-        with open(file_name, "w") as file:
-            file.write(message)
-            print(f"Created log file: {file_name}")
+#         # Generate a unique filename
+#         scam_short = scam.replace(" ", "_")
+#         # if entries_left == 1:
+#         #     file_name = f'../data/{directory}/{scammer.replace(" ", "_").lower()}_{"shipwreck"}.treasure'
+#         # else:
+#         file_name = f'../data/{directory}/{scammer.replace(" ", "_").lower()}_{scam_short}_{date}_{time.replace(":", "").split(" ")[0]}.log'
+#         with open(file_name, "w") as file:
+#             file.write(message)
+#             print(f"Created log file: {file_name}")
 
-        entries_left -= 1
+#         entries_left -= 1
 
-print("All directories and log files created.")
+print("All directories and log files cleared.")

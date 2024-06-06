@@ -90,44 +90,21 @@ def get_time():
 def random_string(length=16):
     return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
-def generate_noise_entries():
+def generate_noise_entries(directory, scammer_name):
 
-    # Total number of entries to create
-    total_entries = 50
+    # Select random elements for the log
+    scam = random.choice(scams)
+    time = get_time()
+    greeting = random.choice(greetings)
+    farewell = random.choice(farewells)
+    success_phrase = random.choice(success_phrases)
+    visit_phrase = random.choice(visit_phrases)
 
-    entires = []
+    # Create the log message
+    message = f"{greeting} {visit_phrase} {directory} {success_phrase} {scam}. {farewell}"
 
-    # Generate logs
-    entries_left = total_entries
-    while entries_left > 0:
-        for directory in directories:
-            if entries_left == 0:
-                break
-            
-            # 50 percent chance to skip creating a log in this directory for this iteration
-            if random.random() < 0.5:
-                continue
+    # Generate a unique filename
+    scam_short = scam.replace(" ", "_")
+    file_name = f'{scammer_name}_{scam_short}_{time.replace(":", "").split(" ")[0]}'
 
-            # Select random elements for the log
-            scam = random.choice(scams)
-            adjective = random.choice(pirate_adjectives)
-            noun = random.choice(pirate_nouns)
-            time = get_time()
-            scammer = f"{adjective} {noun}"
-            scammer_id = random_string()
-            greeting = random.choice(greetings)
-            farewell = random.choice(farewells)
-            success_phrase = random.choice(success_phrases)
-            visit_phrase = random.choice(visit_phrases)
-
-            # Create the log message
-            message = f"Message: {greeting} {visit_phrase} {directory} {success_phrase} {scam}. {farewell}"
-
-            # Generate a unique filename
-            scam_short = scam.replace(" ", "_")
-            file_name = f'{scammer.replace(" ", "_").lower()}_{scam_short}_{time.replace(":", "").split(" ")[0]}'
-            
-            # Add to the list of entries
-            entires.append((directory, file_name, message, time))
-
-            entries_left -= 1
+    return file_name, message, time
