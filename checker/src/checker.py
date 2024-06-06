@@ -93,9 +93,11 @@ async def putflag_treasure(
     logger: LoggerAdapter,    
 ) -> None:
     
-    password: str = "".join(
-        random.choices(string.ascii_uppercase + string.digits, k=16)
-    )
+    password = "AAAAAAAAAAAAAAAA"
+    
+    # password: str = "".join(
+    #     random.choices(string.ascii_uppercase + string.digits, k=16)
+    # )
 
     # Log a message before any critical action that could raise an error.
     welcome = await conn.reader.readuntil(b"$ ")
