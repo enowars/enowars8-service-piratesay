@@ -132,7 +132,7 @@ async def putflag_treasure(
     await conn.create_treasure(directory, filename, password, message, task.flag, random_time)
 
     # Save as an entry in the db for getflag() to use later.
-    await db.set("flagdata", (directory, filename, password, task.flag))
+    await db.set("flagdata", (directory, filename, password))
 
     # Exit
     conn.writer.write(f"dock".encode())
@@ -148,11 +148,11 @@ async def getflag_treasure(
     
     logger.debug("Getting flag: " + task.flag)
     try:
-        directory, filename, password, flag = await db.get("flagdata")
+        directory, filename, password = await db.get("flagdata")
     except KeyError:
         raise MumbleException(f"Missing database entry from putflag")
 
-    logger.debug(f"File info: {directory}/{filename} with password {password} and flag {flag} for {task.flag}")
+    logger.debug(f"File info: {directory}/{filename} with password {password}. Looking for {task.flag}")
     await conn.reader.readuntil(b"$ ")
 
     # Go to the directory
@@ -171,8 +171,8 @@ async def getflag_treasure(
     data = await conn.reader.readuntil(b"$ ")
 
     # Check if the flag is in the file
-    if not f"{flag}".encode() in data:
-            raise MumbleException(f"Couldn't find the flag in {directory}/{filename}")
+    if not f"{task.flag}".encode() in data:
+            raise MumbleException(f"Couldn't find the given flag in {directory}/{filename}")
 
     # Exit!
     conn.writer.write(f"dock\n".encode())
