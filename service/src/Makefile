@@ -8,3 +8,6 @@ OBJ = server.o cli.o session.o
 
 piratesay: $(OBJ)
 	$(CC) -o $@ $^ $(CFLAGS)
+
+clean:
+	rm -f *.o piratesay
