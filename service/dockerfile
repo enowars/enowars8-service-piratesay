@@ -2,7 +2,7 @@
 FROM ubuntu:22.04
 
 # Install necessary packages
-RUN apt-get update && apt-get install -y gcc python3 make gdb cron
+RUN apt-get update && apt-get install -y gcc python3 make gdb cron libssl-dev
 
 # Create a separate user and chown new directories if necessary
 RUN addgroup --system service
@@ -16,21 +16,18 @@ COPY entrypoint.sh /
 RUN chmod +x /entrypoint.sh
 
 # Copy the deletion script and make it executable
-COPY delete_old_files.sh /src/delete_old_files.sh
-RUN chmod +x /src/delete_old_files.sh
+COPY delete_old_files.sh /
+RUN chmod +x /delete_old_files.sh
 
 # Copy the directory creation script and make it executable
-COPY create_directories.sh /src/create_directories.sh
-RUN chmod +x /src/create_directories.sh
+COPY create_directories.sh /
+RUN chmod +x /create_directories.sh
 
 # Set up the cron job using a relative path
-RUN echo "* * * * * root cd /src && ./delete_old_files.sh" >> /etc/crontab
+RUN echo "* * * * * root ./delete_old_files.sh" >> /etc/crontab
 
 # Copy our service (using 'src' here because the reference to splash_screen.txt is hardcoded, so needs to be same as the original)
 COPY src/ /src/
-
-# Change the working directory.
-WORKDIR /src/
 
 # Expose the service's port
 EXPOSE 4444
