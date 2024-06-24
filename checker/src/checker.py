@@ -77,6 +77,10 @@ class Connection:
         self.writer.write(f"\n".encode())
         await self.writer.drain()
         data = await self.reader.readuntil(b": ")
+        # Write blank to reject storing as .private
+        self.writer.write(f"\n".encode())
+        await self.writer.drain()
+        data = await self.reader.readuntil(b": ")
         # Write message
         self.writer.write(f"{message}\n".encode())
         await self.writer.drain()
