@@ -10,6 +10,8 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <time.h>
+#include <ctype.h>
+#include <openssl/sha.h>
 
 // Define the macro for formatting messages into the session buffer
 #define WRITE_TO_BUFFER(session, format, ...)                   \
@@ -309,6 +311,10 @@ int interact_cli(session_t *session)
     {
         help(session);
     }
+    else if (strncmp(command, "identity", 255) == 0)
+    {
+        identity(session);
+    }
     else if (strncmp(command, "dock", 255) == 0)
     {
         return 1; // 1 indicates that the client should be disconnected
@@ -450,6 +456,57 @@ void cat_file(char *filename, session_t *session)
     WRITE_TO_BUFFER(session, "\n");
 }
 
+#define HASH_LENGTH (SHA256_DIGEST_LENGTH * 2 + 1)
+
+void identity(session_t *session)
+{
+    // log all the session info
+    WRITE_TO_BUFFER(session, "Pirate Identity: %s\n", session->pirate_identity);
+    WRITE_TO_BUFFER(session, "Pirate Name: %s %s\n", session->pirate_adjective, session->pirate_noun);
+
+    // Input your new identity (leave blank to keep the same)
+    WRITE_TO_BUFFER(session, "Enter your new pirate identity (leave empty to keep current): ");
+    send(session->sock, session->buffer, strlen(session->buffer), 0);
+    memset(session->buffer, 0, sizeof(session->buffer));
+    int read_size;
+    char new_identity[256];
+    read_size = recv(session->sock, new_identity, 256, 0);
+    // Null-terminate and remove newline
+    new_identity[read_size - 1] = '\0';
+    trim_whitespace(new_identity);
+    fflush(stdout);
+
+    if (strlen(new_identity) > 0)
+    {
+        // Check if the new identity is valid
+        if (strlen(new_identity) != 64)
+        {
+            WRITE_TO_BUFFER(session, "Invalid identity length\n");
+            return;
+        }
+
+        // Check if the new identity is alphanumeric
+        for (int i = 0; i < 64; i++)
+        {
+            if (!isalnum(new_identity[i]))
+            {
+                WRITE_TO_BUFFER(session, "Invalid identity\n");
+                return;
+            }
+        }
+
+        // Update the pirate identity
+        strcpy(session->pirate_identity, new_identity);
+        strcpy(session->pirate_adjective, get_adjective_from_identity(session->pirate_identity));
+        strcpy(session->pirate_noun, get_noun_from_identity(session->pirate_identity));
+        WRITE_TO_BUFFER(session, "Pirate identity updated\n");
+    }
+    else
+    {
+        WRITE_TO_BUFFER(session, "Pirate identity unchanged\n");
+    }
+}
+
 void help(session_t *session)
 {
     WRITE_TO_BUFFER(session, "The Official Pirate Codex:\n");
@@ -457,6 +514,9 @@ void help(session_t *session)
     WRITE_TO_BUFFER(session, "  sail [destination] - Set sail for a new destination\n");
     WRITE_TO_BUFFER(session, "  bury - bury treasure for others to find at your destination\n");
     WRITE_TO_BUFFER(session, "  loot [item] - Grab the contents of an item at your destination\n");
+    WRITE_TO_BUFFER(session, "  identity - manage your pirate identity \n");
     WRITE_TO_BUFFER(session, "  codex - Display this pirate codex\n");
     WRITE_TO_BUFFER(session, "  dock - Dock your ship and leave Pirate Prattle\n");
 }
+
+// Checks for a hash

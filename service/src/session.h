@@ -4,8 +4,9 @@
 
 #include <limits.h> // For PATH_MAX
 
-char *get_random_adjective();
-char *get_random_noun();
+char *get_adjective_from_identity(const char *identity_string);
+char *get_noun_from_identity(const char *identity_string);
+void generate_random_identity(char *identity_string);
 
 typedef struct
 {
@@ -14,7 +15,7 @@ typedef struct
     char root_dir[PATH_MAX];
     char local_dir[PATH_MAX];
     char buffer[PATH_MAX];
-    int is_authenticated;
+    char pirate_identity[65];
     char pirate_adjective[20];
     char pirate_noun[20];
 } session_t;

@@ -2,7 +2,10 @@
 FROM ubuntu:22.04
 
 # Install necessary packages
-RUN apt-get update && apt-get install -y gcc python3 make gdb cron libssl-dev
+RUN apt-get update && apt-get install -y gcc python3 make gdb cron libssl-dev file curl
+
+# Install GEF for GDB
+RUN bash -c "$(curl -fsSL https://gef.blah.cat/sh)"
 
 # Create a separate user and chown new directories if necessary
 RUN addgroup --system service

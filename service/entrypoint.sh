@@ -18,7 +18,7 @@ cron
 make -C /src
 
 # Launch our service as user 'service' and run 'run' within gdb
-# exec su -s /bin/sh -c 'gdb -ex "set follow-fork-mode child" -ex run -ex quit piratesay' service
+# exec su -s /bin/sh -c 'gdb -ex "set follow-fork-mode child" -ex run -ex quit /src/piratesay' service
 exec su -s /bin/sh -c '/src/piratesay' service
 
 # Keep the container running

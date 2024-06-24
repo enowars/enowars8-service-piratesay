@@ -1,6 +1,7 @@
 # version: "3"
 services:
   piratesay:
+    container_name: piratesay
     build: .
     # The code should be copied into the container using COPY.
     # Mount the data folder writable, so that information can be persisted across restarts.

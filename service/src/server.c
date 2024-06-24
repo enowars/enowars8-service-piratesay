@@ -119,12 +119,12 @@ void client_session(int *socket_desc)
 
     session_t session;
     session.sock = sock;
-    strcpy(session.local_dir, "/");     // Local directory
-    strcpy(session.root_dir, root_dir); // Root directory
-    strcpy(session.full_dir, root_dir); // Full path
-    strcpy(session.pirate_adjective, get_random_adjective());
-    strcpy(session.pirate_noun, get_random_noun());
-    session.is_authenticated = 0; // Default not authenticated
+    strcpy(session.local_dir, "/");                                                         // Local directory
+    strcpy(session.root_dir, root_dir);                                                     // Root directory
+    strcpy(session.full_dir, root_dir);                                                     // Full path
+    generate_random_identity(session.pirate_identity);                                      // Generate a random identity
+    strcpy(session.pirate_adjective, get_adjective_from_identity(session.pirate_identity)); // Get adjective from identity
+    strcpy(session.pirate_noun, get_noun_from_identity(session.pirate_identity));           // Get noun from identity
 
     int read_size;
 
