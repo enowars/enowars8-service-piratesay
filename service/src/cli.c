@@ -136,7 +136,7 @@ int interact_cli(session_t *session)
             strftime(time_str, sizeof(time_str), "%H:%M", tm);
         }
 
-        WRITE_TO_BUFFER(session, "Protect with a parrot? (enter password or blank for nothing): ");
+        WRITE_TO_BUFFER(session, "Protect with a parrot? (enter password or leave blank for unprotected): ");
         send(session->sock, session->buffer, strlen(session->buffer), 0);
         memset(session->buffer, 0, sizeof(session->buffer));
         read_size;
@@ -146,6 +146,27 @@ int interact_cli(session_t *session)
         parrot_input[read_size] = '\0';
         trim_whitespace(parrot_input);
         fflush(stdout);
+
+        // If parrot input is empty, ask to save with identity
+        int save_with_identity = 0;
+        if (strncmp(parrot_input, "", 255) == 0)
+        {
+            WRITE_TO_BUFFER(session, "Protect with your pirate identity? (y/n): ");
+            send(session->sock, session->buffer, strlen(session->buffer), 0);
+            memset(session->buffer, 0, sizeof(session->buffer));
+            char identity_input[256];
+            read_size = recv(session->sock, identity_input, 256, 0);
+            // Null-terminate and remove newline
+            identity_input[read_size - 1] = '\0';
+            trim_whitespace(identity_input);
+            fflush(stdout);
+
+            if (strncmp(identity_input, "y", 255) == 0)
+            {
+                save_with_identity = 1;
+            }
+        }
+
         WRITE_TO_BUFFER(session, "What's your message: ");
         send(session->sock, session->buffer, strlen(session->buffer), 0);
         memset(session->buffer, 0, sizeof(session->buffer));
@@ -199,7 +220,13 @@ int interact_cli(session_t *session)
             sprintf(scam_filename, "%s.treasure", scam_filename);
             // add the password to the end of the content
             sprintf(content, "%s\n\nProtected with password:\n%s", content, parrot_input);
-            WRITE_TO_BUFFER(session, "Protected with password: %s\n", parrot_input);
+        }
+        // save as a private file with identity
+        else if (save_with_identity)
+        {
+            sprintf(scam_filename, "%s.private", scam_filename);
+            // add the identity to the end of the content
+            sprintf(content, "%s\n\nProtected with identity:\n%s", content, session->pirate_identity);
         }
         else // or normal log file
         {
@@ -436,6 +463,67 @@ void cat_file(char *filename, session_t *session)
         }
     }
 
+    // If this is a .private file, check if the identity matches
+    else if (strstr(filename, ".private") != NULL)
+    {
+        char correct_identity[65];
+        // read the last line of the file, this is the identity
+        FILE *file = fopen(file_path, "r");
+        if (file == NULL)
+        {
+            WRITE_TO_BUFFER(session, "No treasure '%s' to loot\n", filename);
+            return;
+        }
+        char line[256];
+        while (fgets(line, sizeof(line), file))
+        {
+            strcpy(correct_identity, line);
+        }
+        fclose(file);
+
+        // Check if the identity matches
+        int has_access = 0;
+
+        // if matching identity
+        if (strncmp(session->pirate_identity, correct_identity, 255) == 0)
+        {
+            has_access = 1;
+        }
+
+        if (!has_access)
+        {
+            // other users can still access the file if they were given the key by the owner
+            char identity_input[65];
+            WRITE_TO_BUFFER(session, "This is not your private treasure; prove the owner has entrusted you their code\n");
+            WRITE_TO_BUFFER(session, "Identity code: ");
+            send(session->sock, session->buffer, strlen(session->buffer), 0);
+            memset(session->buffer, 0, sizeof(session->buffer));
+            int read_size;
+            read_size = recv(session->sock, identity_input, 65, 0);
+            // Null-terminate and remove newline
+            identity_input[read_size - 1] = '\0';
+            trim_whitespace(identity_input);
+            fflush(stdout);
+            if (strncmp(identity_input, correct_identity, 255) == 0)
+            {
+                has_access = 1;
+            }
+            else
+            {
+                // warn the user to deter them from trying again
+                char warning[1024];
+                snprintf(warning, sizeof(warning), "Ahoy, trying to steal are we? Your identity %s doesn't match. Keep this up and you'll be forced to walk the plank!\n", session->pirate_identity);
+                WRITE_TO_BUFFER(session, warning);
+            }
+        }
+
+        // if still no access, return
+        if (!has_access)
+        {
+            return;
+        }
+    }
+
     // Open and print the contents of the file
     FILE *file = fopen(file_path, "r");
     // print current directory
@@ -483,16 +571,6 @@ void identity(session_t *session)
         {
             WRITE_TO_BUFFER(session, "Invalid identity length\n");
             return;
-        }
-
-        // Check if the new identity is alphanumeric
-        for (int i = 0; i < 64; i++)
-        {
-            if (!isalnum(new_identity[i]))
-            {
-                WRITE_TO_BUFFER(session, "Invalid identity\n");
-                return;
-            }
         }
 
         // Update the pirate identity

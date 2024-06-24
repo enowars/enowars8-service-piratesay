@@ -32,44 +32,6 @@ void handle_sigchld(int sig)
     }
 }
 
-void sanitize_string(char *input)
-{
-    char buffer[PATH_MAX];
-    char *insert_point = buffer;
-    const char *tmp = input;
-
-    while (*tmp)
-    {
-        // Look for the next '%'
-        if (*tmp == '%')
-        {
-            const char *p = tmp + 1;
-            // Scan until we find an 'n'
-            while (*p && *p != 'n')
-            {
-                p++;
-            }
-
-            // If we found an 'n'
-            if (*p == 'n')
-            {
-                // Skip the pattern
-                tmp = p + 1;
-                continue;
-            }
-        }
-
-        // Copy the current character and move to the next
-        *insert_point++ = *tmp++;
-    }
-
-    // Null-terminate the buffer
-    *insert_point = '\0';
-
-    // Copy sanitized buffer back to input
-    strcpy(input, buffer);
-}
-
 void trim_whitespace(char *str)
 {
     if (str == NULL)
@@ -99,8 +61,6 @@ void trim_whitespace(char *str)
         str[len - 1] = '\0';
         len--;
     }
-
-    sanitize_string(str);
 }
 
 void print_terminal_prompt(session_t *session)
