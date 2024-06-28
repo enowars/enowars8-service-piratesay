@@ -180,8 +180,6 @@ int interact_cli(session_t *session)
                 date,
                 time_str, session->pirate_adjective, session->pirate_noun, custom_ID, message_input);
 
-        printf("%s\n", content);
-
         // Create a new file at the current destination
         char scam_filename[1024];
 
@@ -225,8 +223,10 @@ int interact_cli(session_t *session)
         else if (save_with_identity)
         {
             sprintf(scam_filename, "%s.private", scam_filename);
-            // add the identity to the end of the content
-            sprintf(content, "%s\n\nProtected with identity:\n%s", content, session->pirate_identity);
+            // hash the identity and add it to the end of the content
+            unsigned char hash[SHA256_DIGEST_LENGTH];
+            compute_sha256(session->pirate_identity, hash);
+            sprintf(content, "%s\n\nProtected with identity hash:\n%s", content, hash);
         }
         else // or normal log file
         {
@@ -312,7 +312,7 @@ int interact_cli(session_t *session)
         DIR *directory = opendir(resolved_path);
         if (directory == NULL)
         {
-            WRITE_TO_BUFFER(session, "Scouting '%s' doesn't really work\n", directory_path); // TODO: Consider leaking info here as intentional vuln?
+            WRITE_TO_BUFFER(session, "Scouting '%s' doesn't really work\n", directory_path);
             return 0;
         }
 
@@ -466,7 +466,7 @@ void cat_file(char *filename, session_t *session)
     // If this is a .private file, check if the identity matches
     else if (strstr(filename, ".private") != NULL)
     {
-        char correct_identity[65];
+        char correct_hash[65];
         // read the last line of the file, this is the identity
         FILE *file = fopen(file_path, "r");
         if (file == NULL)
@@ -477,15 +477,15 @@ void cat_file(char *filename, session_t *session)
         char line[256];
         while (fgets(line, sizeof(line), file))
         {
-            strcpy(correct_identity, line);
+            strcpy(correct_hash, line);
         }
         fclose(file);
 
-        // Check if the identity matches
+        // Check if the hash of the pirate identity matches the stored identity
         int has_access = 0;
-
-        // if matching identity
-        if (strncmp(session->pirate_identity, correct_identity, 255) == 0)
+        unsigned char hash[65];
+        compute_sha256(session->pirate_identity, hash);
+        if (strncmp(correct_hash, (char *)hash, 64) == 0)
         {
             has_access = 1;
         }
@@ -504,7 +504,9 @@ void cat_file(char *filename, session_t *session)
             identity_input[read_size - 1] = '\0';
             trim_whitespace(identity_input);
             fflush(stdout);
-            if (strncmp(identity_input, correct_identity, 255) == 0)
+            // Check if the hash of the inputed identity matches the stored identity
+            compute_sha256(identity_input, hash);
+            if (strncmp(correct_hash, (char *)hash, 64) == 0)
             {
                 has_access = 1;
             }
@@ -544,8 +546,6 @@ void cat_file(char *filename, session_t *session)
     WRITE_TO_BUFFER(session, "\n");
 }
 
-#define HASH_LENGTH (SHA256_DIGEST_LENGTH * 2 + 1)
-
 void identity(session_t *session)
 {
     // log all the session info
@@ -569,7 +569,7 @@ void identity(session_t *session)
         // Check if the new identity is valid
         if (strlen(new_identity) != 64)
         {
-            WRITE_TO_BUFFER(session, "Invalid identity length\n");
+            WRITE_TO_BUFFER(session, "Length must be 64 (not %d)\n", strlen(new_identity));
             return;
         }
 

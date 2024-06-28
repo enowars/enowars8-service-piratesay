@@ -7,6 +7,7 @@
 char *get_adjective_from_identity(const char *identity_string);
 char *get_noun_from_identity(const char *identity_string);
 void generate_random_identity(char *identity_string);
+void compute_sha256(const char *str, unsigned char *outputBuffer);
 
 typedef struct
 {

@@ -9,7 +9,7 @@ chown -R service:service "/data/"
 ./create_directories.sh
 
 # Force the deletion script to run once using a relative path
-./delete_old_files.sh
+# ./delete_old_files.sh
 
 # Start cron service
 cron

@@ -20,7 +20,8 @@ directories = [
     "MaroonersLagoon",
     "ParrotPerch",
     "RumRunnersRidge",
-    "GalleonGraveyard"
+    "GalleonGraveyard",
+    "VIPIsland"
 ]
 
 # List of scams
