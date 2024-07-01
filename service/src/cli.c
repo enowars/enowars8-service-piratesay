@@ -594,7 +594,7 @@ void help(session_t *session)
     WRITE_TO_BUFFER(session, "  loot [item] - Grab the contents of an item at your destination\n");
     WRITE_TO_BUFFER(session, "  identity - manage your pirate identity \n");
     WRITE_TO_BUFFER(session, "  codex - Display this pirate codex\n");
-    WRITE_TO_BUFFER(session, "  dock - Dock your ship and leave Pirate Prattle\n");
+    WRITE_TO_BUFFER(session, "  dock - Dock your ship and leave Pirate Say\n");
 }
 
 // Checks for a hash
