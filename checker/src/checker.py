@@ -173,6 +173,66 @@ def _get_connection(socket: AsyncSocket, logger: LoggerAdapter) -> Connection:
 CHECKER FUNCTIONS
 """
 
+# Check that traversal works as expected
+@checker.havoc(0)
+async def havoc_traversal(task: HavocCheckerTaskMessage, logger: LoggerAdapter, conn: Connection):
+
+    await conn.reader.readuntil(b"$ ")
+    # 1. Try to navigate out of the root directory
+    conn.writer.write(b"sail ..\n")
+    await conn.writer.drain()
+    data = await conn.reader.readuntil(b"$ ")
+
+    if not b"You cannot sail beyond the seven seas (root directory)" in data:
+        raise MumbleException("Navigating out of the root directory is possible")
+    
+
+    # 2. Try to navigate to another directory within the root directory
+    dir1 = get_random_dir_locally()
+    dir2 = get_random_dir_locally()
+    # Sail to a directory
+    conn.writer.write(f"sail {dir1}\n".encode())
+    await conn.writer.drain()
+    await conn.reader.readuntil(b"$ ")
+    # Try to navigate to other internal folder
+    conn.writer.write(f"sail ../{dir2}\n".encode())
+    await conn.writer.drain()
+    data = await conn.reader.readuntil(b"$ ")
+    # Data should now include dir2
+    if not f"{dir2}".encode() in data:
+        raise MumbleException("Navigating to other directories within the root directory is not possible")
+    
+    # 3. Try to navigate to a non-existent directory
+    conn.writer.write(f"sail ../nonexistent\n".encode())
+    await conn.writer.drain()
+    data = await conn.reader.readuntil(b"$ ")
+    if not b"Path does not exist or is not accessible." in data:
+        raise MumbleException("Navigating to a non-existent directory is possible")
+
+# Check that file creation works as expected
+@checker.havoc(1)
+async def havoc_file_creation(task: HavocCheckerTaskMessage, logger: LoggerAdapter, conn: Connection):
+    await conn.reader.readuntil(b"$ ")
+    # 1. Try to create a file in the root directory
+    conn.writer.write(b"bury root_file\n")
+    await conn.writer.drain()
+    data = await conn.reader.readuntil(b"$ ")
+    if b"Can't bury treasure at sea" not in data:
+        raise MumbleException("Creating files in the root directory is possible")
+
+    # 2. Try to create a file in another directory
+    dir_1 = get_random_dir_locally()
+    dir_2 = get_random_dir_locally()
+    conn.writer.write(f"sail {dir_1}\n".encode())
+    await conn.writer.drain()
+    await conn.reader.readuntil(b"$ ")
+    conn.writer.write(f"bury ../{dir_2}/test_file\n".encode())
+    await conn.writer.drain()
+    data = await conn.reader.readuntil(b"$ ")
+
+    if b"Can only bury treasure where your ship is" not in data:
+        raise MumbleException("Path traversal is possible when creating files")
+
 @checker.putnoise(0)
 async def putnoise0(task: PutnoiseCheckerTaskMessage, db: ChainDB, logger: LoggerAdapter, conn: Connection):
 
