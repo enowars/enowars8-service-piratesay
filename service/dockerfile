@@ -27,7 +27,7 @@ COPY create_directories.sh /
 RUN chmod +x /create_directories.sh
 
 # Set up the cron job using a relative path
-# RUN echo "* * * * * service /delete_old_files.sh" >> /etc/crontab
+RUN echo "* * * * * service /delete_old_files.sh" >> /etc/crontab
 
 # Copy our service (using 'src' here because the reference to splash_screen.txt is hardcoded, so needs to be same as the original)
 COPY src/ /src/
