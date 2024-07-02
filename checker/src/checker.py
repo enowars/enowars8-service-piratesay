@@ -153,9 +153,9 @@ class Connection:
     async def get_identity(self):
         self.writer.write(f"identity\n".encode())
         await self.writer.drain()
-        data = await self.reader.readuntil(b": ")
+        data = await self.reader.readuntil(b"Enter your new pirate identity (leave empty to keep current): ")
         # Send blank, so as not to change it
-        self.writer.write(f"\n".encode())
+        self.writer.write(b"\n")
         await self.writer.drain()
         await self.reader.readuntil(b"$ ")
 
@@ -340,13 +340,13 @@ async def getflag_treasure(
     task: GetflagCheckerTaskMessage, db: ChainDB, logger: LoggerAdapter, conn: Connection
 ) -> None:
     
-    logger.debug("Getting flag: " + task.flag)
+    # logger.debug("Getting flag: " + task.flag)
     try:
         directory, filename, password = await db.get("treasuredata")
     except KeyError:
-        raise MumbleException(f"Missing database entry from putflag")
+        raise MumbleException(f"Missing treasure database entry from putflag")
 
-    logger.debug(f"Looking for flag in treasure file {directory}/{filename}.")
+    # logger.debug(f"Looking for flag in treasure file {directory}/{filename}.")
     await conn.reader.readuntil(b"$ ")
 
     # Go to the directory
@@ -376,7 +376,7 @@ async def getflag_treasure(
 @checker.exploit(0)
 async def exploit_treasure(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn: Connection, logger: LoggerAdapter) -> Optional[str]:
 
-    logger.debug(f"Exploiting: {task.attack_info}" )
+    # logger.debug(f"Exploiting: {task.attack_info}" )
 
     if not task.attack_info:
         raise MumbleException("No attack info provided")
@@ -488,13 +488,13 @@ async def getflag_private(
     task: GetflagCheckerTaskMessage, db: ChainDB, logger: LoggerAdapter, conn: Connection
 ) -> None:
     
-    logger.debug("Getting flag: " + task.flag)
+    # logger.debug("Getting flag: " + task.flag)
     try:
         directory, filename, identity = await db.get("privatedata")
     except KeyError:
-        raise MumbleException(f"Missing database entry from putflag")
+        raise MumbleException(f"Missing private database entry from putflag")
 
-    logger.debug(f"Looking for flag in private file {directory}/{filename}.")
+    # logger.debug(f"Looking for flag in private file {directory}/{filename}.")
     await conn.reader.readuntil(b"$ ")
 
     # Set identity to the one we got from the database
@@ -513,11 +513,14 @@ async def getflag_private(
     # Open the file
     conn.writer.write(f"loot {filename}.private\n".encode())
     await conn.writer.drain()
+    # await conn.reader.readuntil(b"Identity code: ")
+    # conn.writer.write(f"{identity}\n".encode())
+    # await conn.writer.drain()
     data = await conn.reader.readuntil(b"$ ")
 
     # Check if the flag is in the file
     if not f"{task.flag}".encode() in data:
-            raise MumbleException(f"Couldn't find the given flag in {directory}/{filename}")
+        raise MumbleException(f"Couldn't find the given flag in {directory}/{filename}")
 
     # Exit!
     conn.writer.write(f"dock\n".encode())
@@ -531,7 +534,7 @@ access_variable_pos = 0x192c
 @checker.exploit(1)
 async def exploit_private(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn: Connection, logger: LoggerAdapter) -> Optional[str]:
 
-    logger.debug(f"Exploiting: {task.attack_info}" )
+    # logger.debug(f"Exploiting: {task.attack_info}" )
 
     if not task.attack_info:
         raise MumbleException("No attack info provided")
@@ -577,7 +580,7 @@ async def exploit_private(task: ExploitCheckerTaskMessage, searcher: FlagSearche
     # Calculate the address of the access variable using relative positions in hex
     reference_variable_address = int(reference_variable_address, 16)
     access_variable_address = reference_variable_address - reference_variable_pos + access_variable_pos
-    logger.debug(f"Access variable address: {hex(access_variable_address)}")
+    # logger.debug(f"Access variable address: {hex(access_variable_address)}")
 
     # 3. Set identity and loot to write a truthy value to the access variable
 
