@@ -58,9 +58,7 @@ class Connection:
         self.logger = logger
 
     async def create_log(self, directory: str, filename: str, message: str, timestamp: str):
-        self.logger.debug(
-            f"Sending command to create log: {filename} in directory {directory} with message: {message}"
-        )
+
         # Go to the directory
         self.writer.write(f"sail {directory}\n".encode())
         await self.writer.drain()
@@ -90,9 +88,7 @@ class Connection:
             raise MumbleException("Failed to create log file")
         
     async def create_treasure(self, directory: str, filename: str, password: str, message: str, flag: str, timestamp: str):
-        self.logger.debug(
-            f"Sending command to create treasure: {filename} in directory {directory} with message: {message}"
-        )
+
         # Go to the directory
         self.writer.write(f"sail {directory}\n".encode())
         await self.writer.drain()
@@ -119,9 +115,6 @@ class Connection:
     
 
     async def create_private(self, directory: str, filename: str, message: str, flag: str, timestamp: str):
-        self.logger.debug(
-            f"Sending command to create private: {filename} in directory {directory} with message: {message}"
-        )
         # Go to the directory
         self.writer.write(f"sail {directory}\n".encode())
         await self.writer.drain()
@@ -247,8 +240,6 @@ async def putnoise0(task: PutnoiseCheckerTaskMessage, db: ChainDB, logger: Logge
 
     filename, message, timestamp = generate_content.generate_noise_entries(directory, scammer_name)
 
-    logger.debug(f"Generated noise: {directory}/{filename} with message {message}")
-
     # Await create_log
     await conn.create_log(directory, filename, message, timestamp)
 
@@ -339,13 +330,11 @@ async def getflag_treasure(
     task: GetflagCheckerTaskMessage, db: ChainDB, logger: LoggerAdapter, conn: Connection
 ) -> None:
     
-    # logger.debug("Getting flag: " + task.flag)
     try:
         directory, filename, password = await db.get("treasuredata")
     except KeyError:
         raise MumbleException("Missing entry: getflag(0)")
 
-    # logger.debug(f"Looking for flag in treasure file {directory}/{filename}.")
     await conn.reader.readuntil(b"$ ")
 
     # Go to the directory
@@ -485,13 +474,11 @@ async def getflag_private(
     task: GetflagCheckerTaskMessage, db: ChainDB, logger: LoggerAdapter, conn: Connection
 ) -> None:
     
-    # logger.debug("Getting flag: " + task.flag)
     try:
         directory, filename, identity = await db.get("privatedata")
     except KeyError:
         raise MumbleException("Missing entry: getflag(1)")
 
-    # logger.debug(f"Looking for flag in private file {directory}/{filename}.")
     await conn.reader.readuntil(b"$ ")
 
     # Set identity to the one we got from the database
@@ -575,7 +562,6 @@ async def exploit_private(task: ExploitCheckerTaskMessage, searcher: FlagSearche
     # Calculate the address of the access variable using relative positions in hex
     reference_variable_address = int(reference_variable_address, 16)
     access_variable_address = reference_variable_address - reference_variable_pos + access_variable_pos
-    # logger.debug(f"Access variable address: {hex(access_variable_address)}")
 
     # 3. Set identity and loot to write a truthy value to the access variable
 
