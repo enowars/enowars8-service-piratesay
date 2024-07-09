@@ -22,7 +22,7 @@ def little_endian_to_ascii(hex_address):
     return ascii_string
 
 # Example usage
-hex_address = '0x504f4e4d4c4b4a49'
+hex_address = '0x4154414452455355'
 ascii_representation = little_endian_to_ascii(hex_address)
 print(ascii_representation)  # Output: "olleh"
 

