@@ -261,9 +261,8 @@ async def getnoise0(task: GetnoiseCheckerTaskMessage, db: ChainDB, logger: Logge
     try:
         directory, filename, message = await db.get("noisedata")
     except KeyError:
-        raise MumbleException(f"Missing database entry from putnoise")
+        raise MumbleException("Missing entry: getnoise")
 
-    logger.debug(f"File info: {directory}/{filename}. Looking for message {message}")
     await conn.reader.readuntil(b"$ ")
 
     # Go to the directory
@@ -278,7 +277,7 @@ async def getnoise0(task: GetnoiseCheckerTaskMessage, db: ChainDB, logger: Logge
 
     # Check if the flag is in the file
     if not f"{message}".encode() in content:
-        raise MumbleException(f"Couldn't find the given message in {directory}/{filename}")
+        raise MumbleException("Content mismatch: getnoise(0)")
 
 
 @checker.putflag(0)
@@ -344,7 +343,7 @@ async def getflag_treasure(
     try:
         directory, filename, password = await db.get("treasuredata")
     except KeyError:
-        raise MumbleException(f"Missing treasure database entry from putflag")
+        raise MumbleException("Missing entry: getflag(0)")
 
     # logger.debug(f"Looking for flag in treasure file {directory}/{filename}.")
     await conn.reader.readuntil(b"$ ")
@@ -366,7 +365,7 @@ async def getflag_treasure(
 
     # Check if the flag is in the file
     if not f"{task.flag}".encode() in data:
-            raise MumbleException(f"Couldn't find the given flag in {directory}/{filename}")
+            raise MumbleException("Flag not found: getflag(0)")
 
     # Exit!
     conn.writer.write(f"dock\n".encode())
@@ -375,8 +374,6 @@ async def getflag_treasure(
 
 @checker.exploit(0)
 async def exploit_treasure(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn: Connection, logger: LoggerAdapter) -> Optional[str]:
-
-    # logger.debug(f"Exploiting: {task.attack_info}" )
 
     if not task.attack_info:
         raise MumbleException("No attack info provided")
@@ -427,7 +424,7 @@ async def exploit_treasure(task: ExploitCheckerTaskMessage, searcher: FlagSearch
     if flag := searcher.search_flag(result):
         return flag
 
-    raise MumbleException(f"flag not found during treasure exploit")
+    raise MumbleException(f"flag not found: exploit(0)")
     
 
 @checker.putflag(1)
@@ -492,7 +489,7 @@ async def getflag_private(
     try:
         directory, filename, identity = await db.get("privatedata")
     except KeyError:
-        raise MumbleException(f"Missing private database entry from putflag")
+        raise MumbleException("Missing entry: getflag(1)")
 
     # logger.debug(f"Looking for flag in private file {directory}/{filename}.")
     await conn.reader.readuntil(b"$ ")
@@ -520,7 +517,7 @@ async def getflag_private(
 
     # Check if the flag is in the file
     if not f"{task.flag}".encode() in data:
-        raise MumbleException(f"Couldn't find the given flag in {directory}/{filename}")
+        raise MumbleException("Flag not found: getflag(1)")
 
     # Exit!
     conn.writer.write(f"dock\n".encode())
@@ -533,8 +530,6 @@ access_variable_pos = 0x192c
 
 @checker.exploit(1)
 async def exploit_private(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn: Connection, logger: LoggerAdapter) -> Optional[str]:
-
-    # logger.debug(f"Exploiting: {task.attack_info}" )
 
     if not task.attack_info:
         raise MumbleException("No attack info provided")
@@ -610,7 +605,7 @@ async def exploit_private(task: ExploitCheckerTaskMessage, searcher: FlagSearche
     if flag := searcher.search_flag(result):
         return flag
 
-    raise MumbleException(f"flag not found during private exploit")
+    raise MumbleException("flag not found: exploit(1)")
 
 if __name__ == "__main__":
     checker.run()
