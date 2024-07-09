@@ -482,46 +482,11 @@ void cat_file(char *filename, session_t *session)
         fclose(file);
 
         // Check if the hash of the pirate identity matches the stored identity
-        int has_access = 0;
         unsigned char hash[65];
         compute_sha256(session->pirate_identity, hash);
-        if (strncmp(correct_hash, (char *)hash, 64) == 0)
+        if (strncmp(correct_hash, (char *)hash, 64) != 0)
         {
-            has_access = 1;
-        }
-
-        if (!has_access)
-        {
-            // other users can still access the file if they were given the key by the owner
-            char identity_input[65];
-            WRITE_TO_BUFFER(session, "This is not your private treasure; prove the owner has entrusted you their code\n");
-            WRITE_TO_BUFFER(session, "Identity code: ");
-            send(session->sock, session->buffer, strlen(session->buffer), 0);
-            memset(session->buffer, 0, sizeof(session->buffer));
-            int read_size;
-            read_size = recv(session->sock, identity_input, 65, 0);
-            // Null-terminate and remove newline
-            identity_input[read_size - 1] = '\0';
-            trim_whitespace(identity_input);
-            fflush(stdout);
-            // Check if the hash of the inputed identity matches the stored identity
-            compute_sha256(identity_input, hash);
-            if (strncmp(correct_hash, (char *)hash, 64) == 0)
-            {
-                has_access = 1;
-            }
-            else
-            {
-                // warn the user to deter them from trying again
-                char warning[1024];
-                snprintf(warning, sizeof(warning), "Ahoy, trying to steal are we? Your identity %s doesn't match. Keep this up and you'll be forced to walk the plank!\n", session->pirate_identity);
-                WRITE_TO_BUFFER(session, warning);
-            }
-        }
-
-        // if still no access, return
-        if (!has_access)
-        {
+            WRITE_TO_BUFFER(session, "Arr! This ain't yours matey!\n");
             return;
         }
     }

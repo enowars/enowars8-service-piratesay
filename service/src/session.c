@@ -35,7 +35,6 @@ void compute_sha256(const char *str, char *outputBuffer)
 // Function to generate a random identity string
 void generate_random_identity(char *identity_string)
 {
-    srand(time(NULL));
     for (int i = 0; i < IDENTITY_LENGTH; i++)
     {
         identity_string[i] = 'a' + (rand() % 26);
@@ -43,7 +42,6 @@ void generate_random_identity(char *identity_string)
     identity_string[IDENTITY_LENGTH] = '\0';
 }
 
-// Function to get an adjective from the identity string
 char *get_adjective_from_identity(const char *identity_string)
 {
     unsigned char hash[SHA256_DIGEST_LENGTH * 2];
