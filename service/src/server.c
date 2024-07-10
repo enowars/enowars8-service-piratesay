@@ -32,7 +32,7 @@ void handle_sigchld(int sig)
     }
 }
 
-void trim_whitespace(char *str)
+void trim_whitespace(char *str, size_t buffer_size)
 {
     if (str == NULL)
         return;
@@ -61,6 +61,63 @@ void trim_whitespace(char *str)
         str[len - 1] = '\0';
         len--;
     }
+
+    // Deal with %...n patterns
+
+    // Calculate the length of the original string
+    size_t length = strlen(str);
+    // Calculate the maximum possible length of the new string
+    size_t max_length = 2 * length + 1; // Worst case: every character is '%'
+
+    // Allocate a buffer on the stack
+    char new_str[max_length];
+    memset(new_str, 0, sizeof(new_str)); // Initialize the buffer to zero
+
+    const char *src = str;
+    char *dst = new_str;
+
+    while (*src)
+    {
+        if (*src == '%')
+        {
+            // Find the next 'n' character after '%'
+            const char *p = src + 1;
+            while (*p && *p != 'n')
+            {
+                p++;
+            }
+            if (*p == 'n')
+            {
+                // Add an additional '%' in front of the entire %...n pattern
+                *dst++ = '%';
+                // Add the original '%'
+                *dst++ = *src++;
+                while (src <= p && *src != '%')
+                {
+                    *dst++ = *src++;
+                }
+            }
+            else
+            {
+                // Copy the '%' and move to the next character
+                *dst++ = *src++;
+            }
+        }
+        else
+        {
+            // Copy normal characters
+            *dst++ = *src++;
+        }
+    }
+
+    // Null-terminate the new string
+    *dst = '\0';
+
+    // Copy the modified string back to the original buffer, respecting buffer_size
+    strncpy(str, new_str, buffer_size - 1);
+    str[buffer_size - 1] = '\0'; // Ensure null-termination
+
+    printf("Trimmed string: %s\n", str);
 }
 
 void print_terminal_prompt(session_t *session)
@@ -102,7 +159,7 @@ void client_session(int *socket_desc, char *pirate_identity)
         session.buffer[read_size] = '\0';
 
         // Trim leading and trailing whitespace
-        trim_whitespace(session.buffer);
+        trim_whitespace(session.buffer, sizeof(session.buffer));
 
         if (interact_cli(&session) == 1)
         {

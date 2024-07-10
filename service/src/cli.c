@@ -81,12 +81,12 @@ int interact_cli(session_t *session)
                 strncpy(file_path, argument1 + 1, argument2 - argument1 - 1);
                 file_path[argument2 - argument1 - 1] = '\0';
                 strcpy(custom_ID, argument2 + 1);
-                trim_whitespace(file_path);
+                trim_whitespace(file_path, sizeof(file_path));
             }
             else
             {
                 strcpy(file_path, argument1 + 1);
-                trim_whitespace(file_path);
+                trim_whitespace(file_path, sizeof(file_path));
                 generate_custom_id(custom_ID, 16);
             }
         }
@@ -144,7 +144,7 @@ int interact_cli(session_t *session)
         read_size = recv(session->sock, parrot_input, 256, 0);
         // Null-terminate and remove newline
         parrot_input[read_size] = '\0';
-        trim_whitespace(parrot_input);
+        trim_whitespace(parrot_input, sizeof(parrot_input));
         fflush(stdout);
 
         // If parrot input is empty, ask to save with identity
@@ -158,7 +158,7 @@ int interact_cli(session_t *session)
             read_size = recv(session->sock, identity_input, 256, 0);
             // Null-terminate and remove newline
             identity_input[read_size - 1] = '\0';
-            trim_whitespace(identity_input);
+            trim_whitespace(identity_input, sizeof(identity_input));
             fflush(stdout);
 
             if (strncmp(identity_input, "y", 255) == 0)
@@ -211,6 +211,8 @@ int interact_cli(session_t *session)
 
             sprintf(scam_filename, "%s_%s_scam_%s_%s", lower_case_pirate_adjective, lower_case_pirate_noun, date, time_str);
         }
+
+        printf("Filepath: %s\n", file_path);
 
         // Save as a treasure file with a password
         if (strncmp(parrot_input, "", 255) != 0)
@@ -451,7 +453,7 @@ void cat_file(char *filename, session_t *session)
         read_size = recv(session->sock, password_input, 256, 0);
         // Null-terminate and remove newline
         password_input[read_size] = '\0';
-        trim_whitespace(password_input);
+        trim_whitespace(password_input, sizeof(password_input));
         fflush(stdout);
         if (strncmp(password_input, correct_password, 255) != 0)
         {
@@ -526,7 +528,7 @@ void identity(session_t *session)
     read_size = recv(session->sock, new_identity, 256, 0);
     // Null-terminate and remove newline
     new_identity[read_size - 1] = '\0';
-    trim_whitespace(new_identity);
+    trim_whitespace(new_identity, sizeof(new_identity));
     fflush(stdout);
 
     if (strlen(new_identity) > 0)
