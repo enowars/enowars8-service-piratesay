@@ -1,3 +1,4 @@
+#define _XOPEN_SOURCE 700 // Ensure both strptime and realpath are declared
 #include "cli.h"
 #include "session.h"
 #include "server.h"
@@ -12,12 +13,25 @@
 #include <time.h>
 #include <ctype.h>
 #include <openssl/sha.h>
+#include <stdarg.h>
 
 // Define the macro for formatting messages into the session buffer
-#define WRITE_TO_BUFFER(session, format, ...)                   \
-    snprintf(session->buffer + strlen(session->buffer),         \
-             sizeof(session->buffer) - strlen(session->buffer), \
-             format, ##__VA_ARGS__)
+#define WRITE_TO_BUFFER(session, format, ...)                        \
+    safe_snprintf(session->buffer + strlen(session->buffer),         \
+                  sizeof(session->buffer) - strlen(session->buffer), \
+                  format, ##__VA_ARGS__)
+
+// Uses temp buffer to allow for same buffer to be used for input and output
+void safe_snprintf(char *dest, size_t dest_size, const char *format, ...)
+{
+    char temp[dest_size];
+    va_list args;
+    va_start(args, format);
+    vsnprintf(temp, sizeof(temp), format, args);
+    va_end(args);
+    strncpy(dest, temp, dest_size - 1);
+    dest[dest_size - 1] = '\0'; // Ensure null termination
+}
 
 void generate_custom_id(char *password, size_t length)
 {
@@ -94,14 +108,14 @@ int interact_cli(session_t *session)
         // If at root, can't bury treasure
         if (strcmp(session->full_dir, session->root_dir) == 0)
         {
-            WRITE_TO_BUFFER(session, "Can't bury treasure at sea\n");
+            WRITE_TO_BUFFER(session, "Can't bury at sea\n");
             return 0;
         }
 
         // If file path contains "/", it is not valid
         if (strchr(file_path, '/') != NULL)
         {
-            WRITE_TO_BUFFER(session, "Can only bury treasure where your ship is\n");
+            WRITE_TO_BUFFER(session, "Can only bury where your ship is\n");
             return 0;
         }
 
@@ -124,8 +138,8 @@ int interact_cli(session_t *session)
         // Using provided date and time
         if (strptime(time_input, "%Y-%m-%d %H:%M", &tm) != NULL)
         {
-            sprintf(date, "%04d-%02d-%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
-            sprintf(time_str, "%02d:%02d", tm.tm_hour, tm.tm_min);
+            snprintf(date, sizeof(date), "%04d-%02d-%02d", tm.tm_year + 1900, tm.tm_mon + 1, tm.tm_mday);
+            snprintf(time_str, sizeof(time_str), "%02d:%02d", tm.tm_hour, tm.tm_min);
         }
         else
         {
@@ -176,9 +190,9 @@ int interact_cli(session_t *session)
         message_input[read_size - 1] = '\0';
         fflush(stdout);
 
-        sprintf(content, "Scam Details:\n----------------\nDate: %s\nTime: %s UTC\nScammer: %s %s\nScammer ID: %s\n\nMessage: %s",
-                date,
-                time_str, session->pirate_adjective, session->pirate_noun, custom_ID, message_input);
+        snprintf(content, sizeof(content), "Scam Details:\n----------------\nDate: %s\nTime: %s UTC\nScammer: %s %s\nScammer ID: %s\n\nMessage: %s",
+                 date,
+                 time_str, session->pirate_adjective, session->pirate_noun, custom_ID, message_input);
 
         // Create a new file at the current destination
         char scam_filename[1024];
@@ -209,35 +223,33 @@ int interact_cli(session_t *session)
             }
             time_str[j] = '\0'; // Null-terminate the adjusted time string
 
-            sprintf(scam_filename, "%s_%s_scam_%s_%s", lower_case_pirate_adjective, lower_case_pirate_noun, date, time_str);
+            snprintf(scam_filename, sizeof(scam_filename), "%s_%s_scam_%s_%s", lower_case_pirate_adjective, lower_case_pirate_noun, date, time_str);
         }
-
-        printf("Filepath: %s\n", file_path);
 
         // Save as a treasure file with a password
         if (strncmp(parrot_input, "", 255) != 0)
         {
-            sprintf(scam_filename, "%s.treasure", scam_filename);
+            safe_snprintf(scam_filename, sizeof(scam_filename), "%s.treasure", scam_filename);
             // add the password to the end of the content
-            sprintf(content, "%s\n\nProtected with password:\n%s", content, parrot_input);
+            safe_snprintf(content, sizeof(content), "%s\n\nProtected with password:\n%s", content, parrot_input);
         }
         // save as a private file with identity
         else if (save_with_identity)
         {
-            sprintf(scam_filename, "%s.private", scam_filename);
+            safe_snprintf(scam_filename, sizeof(scam_filename), "%s.private", scam_filename);
             // hash the identity and add it to the end of the content
             unsigned char hash[SHA256_DIGEST_LENGTH];
             compute_sha256(session->pirate_identity, hash);
-            sprintf(content, "%s\n\nProtected with identity hash:\n%s", content, hash);
+            safe_snprintf(content, sizeof(content), "%s\n\nProtected with identity hash:\n%s", content, hash);
         }
         else // or normal log file
         {
-            sprintf(scam_filename, "%s.log", scam_filename);
+            safe_snprintf(scam_filename, sizeof(scam_filename), "%s.log", scam_filename);
         }
 
         // Get absolute path
         char absolute_path[PATH_MAX];
-        snprintf(absolute_path, sizeof(absolute_path), "%s/%s", session->full_dir, scam_filename);
+        safe_snprintf(absolute_path, sizeof(absolute_path), "%s/%s", session->full_dir, scam_filename);
         // If file already exists, creation fails
         if (access(absolute_path, F_OK) != -1)
         {
@@ -296,7 +308,7 @@ int interact_cli(session_t *session)
             strcpy(directory_path, ".");
         }
         char absolute_path[PATH_MAX];
-        snprintf(absolute_path, sizeof(absolute_path), "%s/%s", session->full_dir, directory_path);
+        safe_snprintf(absolute_path, sizeof(absolute_path), "%s/%s", session->full_dir, directory_path);
         char resolved_path[PATH_MAX];
         if (realpath(absolute_path, resolved_path) == NULL)
         {
@@ -359,7 +371,7 @@ int interact_cli(session_t *session)
 int change_directory(char *path, session_t *session)
 {
     char absolute_path[PATH_MAX];
-    snprintf(absolute_path, sizeof(absolute_path), "%s/%s", session->full_dir, path);
+    safe_snprintf(absolute_path, sizeof(absolute_path), "%s/%s", session->full_dir, path);
     char resolved_path[PATH_MAX];
 
     // 1. Resolve the path to an absolute path
@@ -394,13 +406,13 @@ int change_directory(char *path, session_t *session)
     strcpy(session->full_dir, resolved_path);
 
     // Calculate the local directory relative to the root directory
-    snprintf(session->local_dir, sizeof(session->local_dir), "%s", resolved_path + strlen(session->root_dir));
+    safe_snprintf(session->local_dir, sizeof(session->local_dir), "%s", resolved_path + strlen(session->root_dir));
 
     // Ensure local_dir starts with a '/'
     if (session->local_dir[0] != '/')
     {
         char temp_dir[PATH_MAX];
-        snprintf(temp_dir, sizeof(temp_dir), "/%s", session->local_dir);
+        safe_snprintf(temp_dir, sizeof(temp_dir), "/%s", session->local_dir);
         strcpy(session->local_dir, temp_dir);
     }
 
@@ -414,16 +426,24 @@ void cat_file(char *filename, session_t *session)
     // check that it is not a directory
     struct stat path_stat;
     char file_path[PATH_MAX];
-    sprintf(file_path, "%s/%s", session->full_dir, filename);
+    safe_snprintf(file_path, sizeof(file_path), "%s/%s", session->full_dir, filename);
     if (stat(file_path, &path_stat) != 0)
     {
-        WRITE_TO_BUFFER(session, "No treasure '%s' to loot\n", filename);
+        WRITE_TO_BUFFER(session, "No '%s' found\n", filename);
         return;
     }
 
     if (S_ISDIR(path_stat.st_mode))
     {
-        WRITE_TO_BUFFER(session, "'%s' is a destination, not a treasure\n", filename);
+        WRITE_TO_BUFFER(session, "'%s' is a destination and can't be looted\n", filename);
+        return;
+    }
+
+    // Open the file to prepare for reading
+    FILE *file = fopen(file_path, "r");
+    if (file == NULL)
+    {
+        WRITE_TO_BUFFER(session, "Unknown error while accessing '%s'\n", filename);
         return;
     }
 
@@ -432,18 +452,11 @@ void cat_file(char *filename, session_t *session)
     {
         char correct_password[256];
         // read the last line of the file, this is the password
-        FILE *file = fopen(file_path, "r");
-        if (file == NULL)
-        {
-            WRITE_TO_BUFFER(session, "No treasure '%s' to loot\n", filename);
-            return;
-        }
         char line[256];
         while (fgets(line, sizeof(line), file))
         {
             strcpy(correct_password, line);
         }
-        fclose(file);
         WRITE_TO_BUFFER(session, "A parrot is guarding the treasure tightly\n");
         WRITE_TO_BUFFER(session, "Speak your words: ");
         send(session->sock, session->buffer, strlen(session->buffer), 0);
@@ -459,8 +472,9 @@ void cat_file(char *filename, session_t *session)
         {
             // Parrot feedback
             char feedback[1024];
-            snprintf(feedback, sizeof(feedback), "%s is wrong, %s is wrong, captain!\n", password_input, password_input);
+            safe_snprintf(feedback, sizeof(feedback), "%s is wrong, %s is wrong, captain!\n", password_input, password_input);
             WRITE_TO_BUFFER(session, feedback);
+            fclose(file);
             return;
         }
     }
@@ -470,37 +484,23 @@ void cat_file(char *filename, session_t *session)
     {
         char correct_hash[65];
         // read the last line of the file, this is the identity
-        FILE *file = fopen(file_path, "r");
-        if (file == NULL)
-        {
-            WRITE_TO_BUFFER(session, "No treasure '%s' to loot\n", filename);
-            return;
-        }
         char line[256];
         while (fgets(line, sizeof(line), file))
         {
             strcpy(correct_hash, line);
         }
-        fclose(file);
-
         // Check if the hash of the pirate identity matches the stored identity
         unsigned char hash[65];
         compute_sha256(session->pirate_identity, hash);
         if (strncmp(correct_hash, (char *)hash, 64) != 0)
         {
             WRITE_TO_BUFFER(session, "Arr! This ain't yours matey!\n");
+            fclose(file);
             return;
         }
     }
 
-    // Open and print the contents of the file
-    FILE *file = fopen(file_path, "r");
-    // print current directory
-    if (file == NULL)
-    {
-        printf("tried opening undefined file: %s\n", filename);
-        return;
-    }
+    // Checks have passed, read the file and send it to the client
     char line[256];
     while (fgets(line, sizeof(line), file))
     {
@@ -536,7 +536,7 @@ void identity(session_t *session)
         // Check if the new identity is valid
         if (strlen(new_identity) != 64)
         {
-            WRITE_TO_BUFFER(session, "Length must be 64 (not %d)\n", strlen(new_identity));
+            WRITE_TO_BUFFER(session, "Length must be 64 (not %zu)\n", strlen(new_identity));
             return;
         }
 

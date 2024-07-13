@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <openssl/sha.h>
+#include <openssl/evp.h>
 #include <time.h>
 
 #define NUM_ADJECTIVES 10
@@ -17,19 +18,39 @@ char *pirate_nouns[NUM_NOUNS] = {
 // Function to compute SHA-256 hash of a string
 void compute_sha256(const char *str, char *outputBuffer)
 {
-    unsigned char hash[SHA256_DIGEST_LENGTH];
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
-    SHA256_Update(&sha256, str, strlen(str));
-    SHA256_Final(hash, &sha256);
+    unsigned char hash[EVP_MAX_MD_SIZE];
+    unsigned int lengthOfHash = 0;
+    EVP_MD_CTX *mdctx;
+
+    // Create and initialize the context
+    if ((mdctx = EVP_MD_CTX_new()) == NULL)
+    {
+        // Handle error: Set a generic error message and return
+        strcpy(outputBuffer, "error");
+        return;
+    }
+
+    // Initialize the Digest operation
+    if (1 != EVP_DigestInit_ex(mdctx, EVP_sha256(), NULL) ||
+        1 != EVP_DigestUpdate(mdctx, str, strlen(str)) ||
+        1 != EVP_DigestFinal_ex(mdctx, hash, &lengthOfHash))
+    {
+        // Handle error: Set a generic error message and return
+        strcpy(outputBuffer, "error");
+        EVP_MD_CTX_free(mdctx);
+        return;
+    }
+
+    // Clean up
+    EVP_MD_CTX_free(mdctx);
 
     // Convert the binary hash to a hexadecimal string
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++)
+    for (unsigned int i = 0; i < lengthOfHash; i++)
     {
         sprintf(outputBuffer + (i * 2), "%02x", hash[i]);
     }
 
-    outputBuffer[SHA256_DIGEST_LENGTH * 2] = '\0'; // Null-terminate the string
+    outputBuffer[lengthOfHash * 2] = '\0'; // Null-terminate the string
 }
 
 // Function to generate a random identity string

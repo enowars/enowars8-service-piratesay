@@ -10,6 +10,7 @@
 #include <arpa/inet.h>
 #include <signal.h>
 #include <sys/wait.h>
+#include <ctype.h>
 
 #define PORT 4444
 
@@ -116,8 +117,6 @@ void trim_whitespace(char *str, size_t buffer_size)
     // Copy the modified string back to the original buffer, respecting buffer_size
     strncpy(str, new_str, buffer_size - 1);
     str[buffer_size - 1] = '\0'; // Ensure null-termination
-
-    printf("Trimmed string: %s\n", str);
 }
 
 void print_terminal_prompt(session_t *session)
@@ -126,17 +125,17 @@ void print_terminal_prompt(session_t *session)
     char dir_message[PATH_MAX];
     memset(dir_print, 0, sizeof(dir_print));
     strcat(dir_print, session->local_dir);
-    sprintf(dir_message, "\n%s%s:%s$ ", session->pirate_adjective, session->pirate_noun, dir_print);
+    safe_snprintf(dir_message, sizeof(dir_message), "\n%s%s:%s$ ", session->pirate_adjective, session->pirate_noun, dir_print);
     send(session->sock, dir_message, strlen(dir_message), 0);
 }
 
-void client_session(int *socket_desc, char *pirate_identity)
+void client_session(int *socket_desc)
 {
     int sock = *socket_desc;
 
     session_t session;
     session.sock = sock;
-    strcpy(session.pirate_identity, pirate_identity);
+    generate_random_identity(session.pirate_identity);                                      // Generate a random identity
     strcpy(session.local_dir, "/");                                                         // Local directory
     strcpy(session.root_dir, root_dir);                                                     // Root directory
     strcpy(session.full_dir, root_dir);                                                     // Full path                                // Generate a random identity
@@ -188,9 +187,6 @@ void client_session(int *socket_desc, char *pirate_identity)
 
 int main()
 {
-    // Seed the random number generator at startup
-    srand(time(NULL));
-
     // get dir and change it to 'data' subfolder
     if (chdir("../data") != 0)
     {
@@ -257,10 +253,6 @@ int main()
     {
         printf("Connection accepted from %s:%d\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
 
-        // generate random identity for new client
-        char pirate_identity[65];
-        generate_random_identity(pirate_identity);
-
         pid_t pid = fork();
         if (pid < 0)
         {
@@ -271,8 +263,9 @@ int main()
         else if (pid == 0)
         {
             // This is the child process
-            close(server_fd);                              // Child does not need the listening socket
-            client_session(&client_sock, pirate_identity); // Handle client connection
+            srand(time(NULL));            // Seed the random number for unique pirate identity
+            close(server_fd);             // Child does not need the listening socket
+            client_session(&client_sock); // Handle client connection
             close(client_sock);
             exit(EXIT_SUCCESS); // End child process
         }
