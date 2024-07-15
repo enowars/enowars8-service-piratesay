@@ -5,15 +5,33 @@
 #include <openssl/evp.h>
 #include <time.h>
 
-#define NUM_ADJECTIVES 10
-#define NUM_NOUNS 10
 #define IDENTITY_LENGTH 64
+#define NUM_ADJECTIVES 100
+#define NUM_NOUNS 100
 
 char *pirate_adjectives[NUM_ADJECTIVES] = {
-    "Red", "Black", "Silver", "Golden", "Scarlet", "Dark", "White", "Blue", "Rogue", "Stormy"};
+    "Red", "Black", "Silver", "Golden", "Scarlet", "Dark", "White", "Blue", "Rogue", "Stormy",
+    "Fearsome", "Mighty", "Brave", "Savage", "Fiery", "Cunning", "Bold", "Fierce", "Grim", "Vengeful",
+    "Merciless", "Wild", "Daring", "Stealthy", "Ferocious", "Deadly", "Bloodthirsty", "Cruel", "Relentless", "Treacherous",
+    "Wrathful", "Ruthless", "Sinister", "Ghostly", "Iron", "Steel", "Thunderous", "Shadowy", "Mysterious", "Menacing",
+    "Dauntless", "Unyielding", "Reckless", "Savvy", "Fearless", "Intrepid", "Grizzled", "Vigilant", "Crafty", "Sly",
+    "Swift", "Dreadful", "Gallant", "Heroic", "Legendary", "Wicked", "Terrorizing", "Formidable", "Chaotic", "Brutal",
+    "Perilous", "Noble", "Valiant", "Infernal", "Monstrous", "Raging", "Vicious", "Sinful", "Boldhearted", "Ferocious",
+    "Indomitable", "Savage", "Dreaded", "Fabled", "Majestic", "Unstoppable", "Ancient", "Stalwart", "Mythic", "Untamed",
+    "Mystic", "Prowling", "Doomed", "Forgotten", "Seafaring", "Wandering", "Shadow", "Deepsea", "Stormborn", "Windrider",
+    "Tidal", "Maelstrom", "Typhoon", "Tempest", "Harpooner", "Corsair", "Buccaneer", "Seawolf", "SeaSerpent", "Kraken"};
 
 char *pirate_nouns[NUM_NOUNS] = {
-    "Beard", "Jack", "Bart", "Pete", "Anne", "Patty", "John", "Hook", "Bill", "Bonny"};
+    "Beard", "Jack", "Bart", "Pete", "Anne", "Patty", "John", "Hook", "Bill", "Bonny",
+    "Morgan", "Davy", "Blackbeard", "Silver", "LongJohn", "Calico", "Rackham", "Teach", "Drake", "Roberts",
+    "Lafitte", "Vane", "Flint", "Kidd", "Bartholomew", "Edward", "Mary", "Jane", "Blood", "Cannon",
+    "Cutlass", "Sparrow", "Corsair", "Marooner", "SeaDog", "Scallywag", "Buccaneer", "SeaWolf", "Privateer", "Matey",
+    "Swashbuckler", "Skull", "Crossbones", "Treasure", "Galleon", "Parrot", "Pistol", "Rum", "Sloop", "Brig",
+    "PirateKing", "Siren", "Corsair", "JollyRoger", "Bounty", "Scourge", "SeaSerpent", "Kraken", "Marauder", "Plunder",
+    "Loot", "Booty", "BountyHunter", "Mutineer", "Captain", "Quartermaster", "Gunner", "Boatswain", "Lookout", "Sailor",
+    "Navigator", "FirstMate", "Shipwright", "PowderMonkey", "CabinBoy", "Deckhand", "Helmsman", "Longboat", "Cannoneer", "Shipmate",
+    "PirateQueen", "SeaRover", "SeaRaider", "SeaCaptain", "Freebooter", "Wench", "Swabber", "Harpooner", "SeaWitch", "Buoy",
+    "Gangplank", "Mainmast", "Crowsnest", "Forecastle", "Hold", "Broadside", "Bilge", "Grog", "Anchor", "Tide"};
 
 // Function to compute SHA-256 hash of a string
 void compute_sha256(const char *str, char *outputBuffer)
@@ -65,17 +83,20 @@ void generate_random_identity(char *identity_string)
 
 char *get_adjective_from_identity(const char *identity_string)
 {
-    unsigned char hash[SHA256_DIGEST_LENGTH * 2];
-    compute_sha256(identity_string, hash);
-    int index = hash[0] % NUM_ADJECTIVES;
+    unsigned int hash = 5381;
+    int c;
+    while ((c = *identity_string++))
+        hash = ((hash << 5) + hash) + c; // hash * 33 + c
+    int index = hash % NUM_ADJECTIVES;
     return pirate_adjectives[index];
 }
 
-// Function to get a noun from the identity string
 char *get_noun_from_identity(const char *identity_string)
 {
-    unsigned char hash[SHA256_DIGEST_LENGTH * 2];
-    compute_sha256(identity_string, hash);
-    int index = hash[1] % NUM_NOUNS;
+    unsigned int hash = 5381;
+    int c;
+    while ((c = *identity_string++))
+        hash = ((hash << 5) + hash) + c;  // hash * 33 + c
+    int index = (hash >> 16) % NUM_NOUNS; // Shift to get a different part of the hash
     return pirate_nouns[index];
 }

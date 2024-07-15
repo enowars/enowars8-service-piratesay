@@ -3,7 +3,7 @@ import re
 import pexpect
 
 # Start the telnet session
-child = pexpect.spawn('telnet localhost 8082')
+child = pexpect.spawn('telnet localhost 4444')
 
 # Expect the initial prompt from the telnet server
 child.expect(r'\$ '.encode())

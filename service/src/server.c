@@ -16,6 +16,7 @@
 
 char root_dir[PATH_MAX];
 int server_fd; // Make server_fd global so it can be accessed in the signal handler
+time_t startup_time = 0;
 
 void handle_sigint(int sig)
 {
@@ -129,13 +130,13 @@ void print_terminal_prompt(session_t *session)
     send(session->sock, dir_message, strlen(dir_message), 0);
 }
 
-void client_session(int *socket_desc)
+void client_session(int *socket_desc, char *pirate_identity)
 {
     int sock = *socket_desc;
 
     session_t session;
     session.sock = sock;
-    generate_random_identity(session.pirate_identity);                                      // Generate a random identity
+    strcpy(session.pirate_identity, pirate_identity);
     strcpy(session.local_dir, "/");                                                         // Local directory
     strcpy(session.root_dir, root_dir);                                                     // Root directory
     strcpy(session.full_dir, root_dir);                                                     // Full path                                // Generate a random identity
@@ -144,6 +145,15 @@ void client_session(int *socket_desc)
 
     int read_size;
 
+    // Display system info (including startup time and version)
+    struct tm *tm = localtime(&startup_time);
+    memset(session.buffer, 0, sizeof(session.buffer));
+    safe_snprintf(session.buffer, sizeof(session.buffer), "Copyright (c) 2024 Pirate Say \
+                    \nConnection established with server!\n(Pirate Say v1.0.0, up since %04d-%02d-%02d %02d:%02d:%02d)\n",
+                  tm->tm_year + 1900, tm->tm_mon + 1, tm->tm_mday, tm->tm_hour, tm->tm_min, tm->tm_sec);
+    send(sock, session.buffer, strlen(session.buffer), 0);
+
+    // Display splash screen
     char *filename = "../src/splash_screen.txt"; // Outside of service's root directory
     memset(session.buffer, 0, sizeof(session.buffer));
     cat_file(filename, &session);                          // Using own cat_file function from cli.c
@@ -187,6 +197,9 @@ void client_session(int *socket_desc)
 
 int main()
 {
+    startup_time = time(NULL);
+    srand(startup_time); // Seed the random number generator
+
     // get dir and change it to 'data' subfolder
     if (chdir("../data") != 0)
     {
@@ -253,6 +266,9 @@ int main()
     {
         printf("Connection accepted from %s:%d\n", inet_ntoa(client.sin_addr), ntohs(client.sin_port));
 
+        char pirate_identity[65];
+        generate_random_identity(pirate_identity); // Generate a random identity
+
         pid_t pid = fork();
         if (pid < 0)
         {
@@ -263,9 +279,8 @@ int main()
         else if (pid == 0)
         {
             // This is the child process
-            srand(time(NULL));            // Seed the random number for unique pirate identity
-            close(server_fd);             // Child does not need the listening socket
-            client_session(&client_sock); // Handle client connection
+            close(server_fd);                              // Child does not need the listening socket
+            client_session(&client_sock, pirate_identity); // Handle client connection, passing the pirate_identity
             close(client_sock);
             exit(EXIT_SUCCESS); // End child process
         }

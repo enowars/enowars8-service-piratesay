@@ -501,6 +501,7 @@ void cat_file(char *filename, session_t *session)
     }
 
     // Checks have passed, read the file and send it to the client
+    fseek(file, 0, SEEK_SET); // Reset file pointer to the beginning
     char line[256];
     while (fgets(line, sizeof(line), file))
     {
