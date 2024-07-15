@@ -56,3 +56,6 @@ dkms.conf
 
 # Mac DS_Store
 .DS_Store
+
+# Data in checker
+checker/data/*
