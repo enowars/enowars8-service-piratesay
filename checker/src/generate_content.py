@@ -38,14 +38,6 @@ scams = [
     "scamming with fake job offers"
 ]
 
-# List of pirate adjectives and nouns
-pirate_adjectives = [
-    "Red", "Black", "Silver", "Golden", "Scarlet", "Dark", "White", "Blue", "Rogue", "Stormy"
-]
-pirate_nouns = [
-    "Beard", "Jack", "Bart", "Pete", "Anne", "Patty", "John", "Hook", "Bill", "Bonny"
-]
-
 # Random greetings and farewells
 greetings = [
     "Ahoy mateys!", "Yo-ho-ho!", "Arrr!", "Avast ye!", "Greetings, landlubbers!"
