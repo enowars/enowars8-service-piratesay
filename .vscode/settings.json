@@ -5,6 +5,8 @@
     "limits.h": "c",
     "session.h": "c",
     "cli.h": "c",
-    "pthread.h": "c"
+    "pthread.h": "c",
+    "algorithm": "c",
+    "cstdlib": "c"
   }
 }

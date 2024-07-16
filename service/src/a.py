@@ -116,11 +116,15 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     current_identity = identity_response.split("\n")[0].split(":")[1].strip()
 
 # Generate all potential identities up to the current one
-libc.srand(0x3039)
+
+libc.srand(seed)
 potential_identities = []
+round = 1
 while True:
     identity_string = generate_identity_string()
+    print(f"{round}: {identity_string}")
     potential_identities.append(identity_string)
+    round += 1
     if identity_string == current_identity:
         break
 

@@ -199,7 +199,7 @@ void client_session(int *socket_desc, char *pirate_identity)
 int main()
 {
     startup_time = time(NULL);
-    srand(startup_time); // Seed the random number generator
+    slcgrand(startup_time); // Seed the random number generator
 
     // get dir and change it to 'data' subfolder
     if (chdir("../data") != 0)

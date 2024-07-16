@@ -9,6 +9,24 @@
 #define NUM_ADJECTIVES 100
 #define NUM_NOUNS 100
 
+// quick linear congruential generator
+#define A 1103515245
+#define C 12345
+#define M 2147483648
+
+static unsigned long seed = 1;
+
+void slcgrand(unsigned int s)
+{
+    seed = s;
+}
+
+int lcgrand()
+{
+    seed = (A * seed + C) % M;
+    return (int)seed;
+}
+
 char *pirate_adjectives[NUM_ADJECTIVES] = {
     "Red", "Black", "Silver", "Golden", "Scarlet", "Dark", "White", "Blue", "Rogue", "Stormy",
     "Fearsome", "Mighty", "Brave", "Savage", "Fiery", "Cunning", "Bold", "Fierce", "Grim", "Vengeful",
@@ -76,7 +94,7 @@ void generate_random_identity(char *identity_string)
 {
     for (int i = 0; i < IDENTITY_LENGTH; i++)
     {
-        identity_string[i] = 'a' + (rand() % 26);
+        identity_string[i] = 'a' + (lcgrand() % 26);
     }
     identity_string[IDENTITY_LENGTH] = '\0';
 }

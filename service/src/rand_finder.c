@@ -1,40 +1,68 @@
 #include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
-static unsigned long int next = 1;
+// Linear Congruential Generator parameters
+#define A 1103515245
+#define C 12345
+#define M 2147483648UL // 2^31
+#define RAND_MAX 2147483647
 
-void advance_rand_state(unsigned long int *state, unsigned int a, unsigned int c, unsigned int m, unsigned int k)
+// Seed value, initialized to 1
+static unsigned long seed = 1;
+
+// Seed the random number generator
+void slcgrand(unsigned int s)
 {
-    unsigned long int a_k = 1;
-    unsigned long int c_k = 0;
-    unsigned long int temp_a = a;
-    unsigned long int temp_c = c;
-
-    while (k > 0)
-    {
-        if (k & 1)
-        {
-            a_k = (a_k * temp_a) % m;
-            c_k = (c_k * temp_a + temp_c) % m;
-        }
-        temp_c = (temp_c * (temp_a + 1)) % m;
-        temp_a = (temp_a * temp_a) % m;
-        k >>= 1;
-    }
-
-    *state = (a_k * (*state) + c_k) % m;
+    seed = s;
 }
 
-int main()
+// Generate a random number using LCG
+int lcgrand()
 {
-    unsigned long int state = 1; // Example initial state
-    unsigned int a = 1103515245;
-    unsigned int c = 12345;
-    unsigned int m = 1 << 31; // 2^31
-    unsigned int k = 1000;
+    seed = (A * seed + C) % M;
+    return (int)seed; // Cast to int to match typical rand function return type
+}
 
-    advance_rand_state(&state, a, c, m, k);
+// Generate a random identity string of given length
+void generate_random_identity(char *identity_string, int length)
+{
+    for (int i = 0; i < length; i++)
+    {
+        identity_string[i] = 'a' + (lcgrand() % 26); // Generate a random lowercase letter
+    }
+    identity_string[length] = '\0'; // Null-terminate the string
+}
 
-    printf("State after advancing 1000 steps: %lu\n", state);
+int main(int argc, char *argv[])
+{
+    if (argc != 3)
+    {
+        fprintf(stderr, "Usage: %s <start_seed> <identity_to_match>\n", argv[0]);
+        return 1;
+    }
+
+    unsigned int start_seed = atoi(argv[1]);
+    char *identity_to_match = argv[2];
+    int identity_length = strlen(identity_to_match);
+    char generated_identity[identity_length + 1];
+    unsigned long initial_seed = start_seed;
+
+    slcgrand(start_seed);
+
+    unsigned long offset = 0;
+    while (1)
+    {
+        generate_random_identity(generated_identity, identity_length);
+        offset++;
+        if (strcmp(generated_identity, identity_to_match) == 0)
+        {
+            printf("Match found!\n");
+            printf("Offset: %lu\n", offset);
+            printf("Seed: %lu\n", seed);
+            break;
+        }
+    }
 
     return 0;
 }
