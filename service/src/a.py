@@ -116,7 +116,7 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     current_identity = identity_response.split("\n")[0].split(":")[1].strip()
 
 # Generate all potential identities up to the current one
-libc.srand(seed)
+libc.srand(0x3039)
 potential_identities = []
 while True:
     identity_string = generate_identity_string()
@@ -127,8 +127,8 @@ while True:
 print("Match at offset:", len(potential_identities))
 
 # The target file we're looking for
-target_directory = "DeadMansBay"
-target_file = "mythic_powder_monkey_found_shipwreck_2017-09-09_2055.private"
+target_directory = "ParrotPerch"
+target_file = "fearless_crowsnest_scam_2024-07-15_1924.private"
 target_name = target_file.split('_')[0] + '_' + target_file.split('_')[1]
 
 # Filter potential identities to find matching ones

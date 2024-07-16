@@ -22,4 +22,4 @@ make -C /src
 exec su -s /bin/sh -c '/src/piratesay' service
 
 # Keep the container running
-tail -f /dev/null
+# tail -f /dev/null

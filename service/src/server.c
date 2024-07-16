@@ -17,6 +17,7 @@
 char root_dir[PATH_MAX];
 int server_fd; // Make server_fd global so it can be accessed in the signal handler
 time_t startup_time = 0;
+int user_count = 0;
 
 void handle_sigint(int sig)
 {
@@ -126,7 +127,7 @@ void print_terminal_prompt(session_t *session)
     char dir_message[PATH_MAX];
     memset(dir_print, 0, sizeof(dir_print));
     strcat(dir_print, session->local_dir);
-    safe_snprintf(dir_message, sizeof(dir_message), "\n%s%s:%s$ ", session->pirate_adjective, session->pirate_noun, dir_print);
+    safe_snprintf(dir_message, sizeof(dir_message), "\n%s%s(%d):%s$ ", session->pirate_adjective, session->pirate_noun, user_count, dir_print);
     send(session->sock, dir_message, strlen(dir_message), 0);
 }
 
@@ -268,6 +269,7 @@ int main()
 
         char pirate_identity[65];
         generate_random_identity(pirate_identity); // Generate a random identity
+        user_count++;
 
         pid_t pid = fork();
         if (pid < 0)

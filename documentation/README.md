@@ -4,15 +4,18 @@ Pirate Say is a TCP-server written in C that presents itself as a pirate-themed 
 
 - .log files: these are standard log files without any password protection
 - .treasure files: these files are protected by a password input that contain a format string vulnerability
+- .private files: these files are associated with a specific user. However, there is a weekness in using the server's startup time to seed the random numbers. Combined with the option to change your "identity string" when connected, this allows us to pose as other users.
 
 # Vulnerabilities
 
 ## Vulnerability #1 - Parrot echoes password back
 
 - Category: Format string
-- Difficulty: Medium
+- Difficulty: Easy/Medium
 
-When trying to access .treasure files, the guarding parrot echoes back your words after each attempt. However, her words are printed without format specifiers, meaning the attempted password "%p" would give back a pointer read from the stack.
+When trying to access .treasure files, the guarding parrot echoes back your words after each attempt. However, its words are printed without format specifiers, meaning the attempted password "%p" would give back a pointer read from the stack.
+
+Note: The code specifically prevents against %n by escaping the % (giving us %%n). The code is structured in a way to try to hide it, as it could be a partial give-away.
 
 # Exploits
 
