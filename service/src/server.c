@@ -65,10 +65,8 @@ void trim_whitespace(char *str, size_t buffer_size)
     }
 
     // Deal with %...n patterns
-
-    // Calculate the length of the original string
+    // Calculate the length of the original string and maximum possible length of the new string
     size_t length = strlen(str);
-    // Calculate the maximum possible length of the new string
     size_t max_length = 2 * length + 1; // Worst case: every character is '%'
 
     // Allocate a buffer on the stack

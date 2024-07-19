@@ -331,8 +331,17 @@ int interact_cli(session_t *session)
         }
 
         struct dirent *entry;
+        // Add "." and ".." manually to ensure they are listed first
+        WRITE_TO_BUFFER(session, ".\n");
+        WRITE_TO_BUFFER(session, "..\n");
         while ((entry = readdir(directory)) != NULL)
         {
+            // Skip "." and ".." entries
+            if (strcmp(entry->d_name, ".") == 0 || strcmp(entry->d_name, "..") == 0)
+            {
+                continue;
+            }
+
             // Calculate the remaining buffer size before writing
             int remaining_buffer_size = sizeof(session->buffer) - strlen(session->buffer) - 1;
             if (remaining_buffer_size > 0)

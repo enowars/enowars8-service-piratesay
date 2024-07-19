@@ -14,5 +14,5 @@ def connect(identity):
             s.sendall(f'dock\n'.encode())
 
 # Use ThreadPoolExecutor to parallelize the process_identity function
-with ThreadPoolExecutor(max_workers=10) as executor:
+with ThreadPoolExecutor() as executor:
     executor.map(connect, matching_identities)
