@@ -46,6 +46,23 @@ directories = [
     "GalleonGraveyard"
 ]
 
+services_real = [
+    "Apple",
+    "Microsoft",
+    "Google",
+    "Amazon",
+    "Meta",
+    "Intel",
+    "IBM",
+    "Tesla",
+    "Samsung",
+    "Sony",
+    "Cisco",
+    "NVIDIA",
+    "Netflix",
+    "ARM",
+]
+
 def get_random_dir_locally():
     return random.choice(directories)
 
@@ -239,7 +256,7 @@ async def putnoise0(task: PutnoiseCheckerTaskMessage, db: ChainDB, logger: Logge
     # Get a random directory
     directory = get_random_dir_locally()
 
-    filename, message, timestamp = generate_content.generate_noise_entries(directory, scammer_name)
+    filename, message, timestamp = generate_content.generate_noise_entries(scammer_name)
 
     # Await create_log
     await conn.create_log(directory, filename, message, timestamp)
@@ -308,7 +325,7 @@ async def putflag_treasure(
     # Get a random directory
     directory = get_random_dir_locally()
 
-    message = f"""Ahoy mateys! I stumbled upon {directory} and 
+    message = f"""Ahoy mateys! I recently hacked into {random.choice(services_real)} and 
     discovered a shipwreck full of treasure and rum! I scavanged it all, 
     except for the ship's old flag. It seemed useless, so I'll leave it for 
     whoever comes next. Yo-ho-ho and away we go!"""
@@ -453,7 +470,7 @@ async def putflag_private(
     # Get a random directory
     directory = get_random_dir_locally()
 
-    message = f"""Ahoy mateys! I stumbled upon {directory} and 
+    message = f"""Ahoy mateys! I recently hacked into {random.choice(services_real)} and 
     discovered a shipwreck full of treasure and rum! I scavanged it all, 
     except for the ship's old flag. It seemed useless, so I'll leave it for 
     whoever comes next. Yo-ho-ho and away we go!"""

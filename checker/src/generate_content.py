@@ -4,24 +4,19 @@ import shutil
 import string
 from datetime import datetime, timedelta
 
-# List of pirate-themed directory names
-directories = [
-    "BlackbeardCove",
-    "TreasureIsland",
-    "SkullAndBonesReef",
-    "DeadMansBay",
-    "JollyRogersHarbor",
-    "BuccaneerBeach",
-    "PirateHideout",
-    "CutthroatCreek",
-    "SirenShores",
-    "CorsairCastle",
-    "WickedWaters",
-    "MaroonersLagoon",
-    "ParrotPerch",
-    "RumRunnersRidge",
-    "GalleonGraveyard",
-    "VIPIsland"
+# List of other services
+services_scam = [
+    "Wonki",
+    "Whatsscam",
+    "ImagiDate",
+    "replme",
+    "c2net",
+    "sceam",
+    "Notify24",
+    "scambox",
+    "blogbuster",
+    "onlyflags",
+    "scamfinder24"
 ]
 
 # List of scams
@@ -83,7 +78,7 @@ def get_time():
 def random_string(length=16):
     return ''.join(random.choices(string.ascii_letters + string.digits, k=length))
 
-def generate_noise_entries(directory, scammer_name):
+def generate_noise_entries(scammer_name):
 
     # Select random elements for the log
     scam = random.choice(scams)
@@ -92,9 +87,10 @@ def generate_noise_entries(directory, scammer_name):
     farewell = random.choice(farewells)
     success_phrase = random.choice(success_phrases)
     visit_phrase = random.choice(visit_phrases)
+    service_scam = random.choice(services_scam)
 
     # Create the log message
-    message = f"{greeting} {visit_phrase} {directory} {success_phrase} {scam}. {farewell}"
+    message = f"{greeting} {visit_phrase} {service_scam} {success_phrase} {scam}. {farewell}"
 
     # Generate a unique filename
     scam_short = scam.replace(" ", "_")
