@@ -500,9 +500,6 @@ async def getflag_private(
     # Open the file
     conn.writer.write(f"loot {filename}.private\n".encode())
     await conn.writer.drain()
-    # await conn.reader.readuntil(b"Identity code: ")
-    # conn.writer.write(f"{identity}\n".encode())
-    # await conn.writer.drain()
     data = await conn.reader.readuntil(b"$ ")
 
     # Check if the flag is in the file
@@ -523,7 +520,8 @@ async def exploit_private(task: ExploitCheckerTaskMessage, searcher: FlagSearche
     private_dir, private_file = task.attack_info.split('/')
 
     seed, current_identity = exploit2.get_seed_and_current_identity(task.address, SERVICE_PORT)
-    matching_identities = exploit2.get_matching_identites(seed, current_identity, private_file)
+    potential_identities = exploit2.get_potential_identites(seed, current_identity)
+    matching_identities = exploit2.get_matching_identites(potential_identities, private_file)
         
     # Use ThreadPoolExecutor to parallelize the process_identity function
     with ThreadPoolExecutor() as executor:
