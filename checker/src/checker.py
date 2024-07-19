@@ -88,7 +88,7 @@ class Connection:
         data = await self.reader.readuntil(b"$ ")
 
         if not b"Burried at" in data:
-            raise MumbleException("Failed to create log file")
+            raise MumbleException("putnoise(0): Failed to create log file")
         
     async def create_treasure(self, directory: str, filename: str, password: str, message: str, flag: str, timestamp: str):
 
@@ -114,7 +114,7 @@ class Connection:
         data = await self.reader.readuntil(b"$ ")
 
         if not b"Burried at" in data:
-            raise MumbleException("Failed to create treasure file")
+            raise MumbleException("putflag(0): Failed to create treasure file")
     
 
     async def create_private(self, directory: str, filename: str, message: str, flag: str, timestamp: str):
@@ -144,7 +144,7 @@ class Connection:
         data = await self.reader.readuntil(b"$ ")
 
         if not b"Burried at" in data:
-            raise MumbleException("Failed to create private file")
+            raise MumbleException("putflag(1): Failed to create private file")
     
     async def get_identity(self):
         self.writer.write(f"identity\n".encode())
@@ -255,7 +255,7 @@ async def getnoise0(task: GetnoiseCheckerTaskMessage, db: ChainDB, logger: Logge
     try:
         directory, filename, message = await db.get("noisedata")
     except KeyError:
-        raise MumbleException("Missing entry: getnoise")
+        raise MumbleException("getnoise(0): Missing db entry")
 
     await conn.reader.readuntil(b"$ ")
 
@@ -269,9 +269,9 @@ async def getnoise0(task: GetnoiseCheckerTaskMessage, db: ChainDB, logger: Logge
     await conn.writer.drain()
     content = await conn.reader.readuntil(b"$ ")
 
-    # Check if the flag is in the file
+    # Check if the log contains the message it should
     if not f"{message}".encode() in content:
-        raise MumbleException("Content mismatch: getnoise(0)")
+        raise MumbleException("getnoise(0): Content mismatch")
 
 
 @checker.putflag(0)
@@ -336,7 +336,7 @@ async def getflag_treasure(
     try:
         directory, filename, password = await db.get("treasuredata")
     except KeyError:
-        raise MumbleException("Missing entry: getflag(0)")
+        raise MumbleException("getflag(0): Missing db entry")
 
     await conn.reader.readuntil(b"$ ")
 
@@ -357,7 +357,7 @@ async def getflag_treasure(
 
     # Check if the flag is in the file
     if not f"{task.flag}".encode() in data:
-            raise MumbleException("Flag not found: getflag(0)")
+        raise MumbleException("getflag(0): Flag not found")
 
     # Exit!
     conn.writer.write(f"dock\n".encode())
@@ -416,7 +416,7 @@ async def exploit_treasure(task: ExploitCheckerTaskMessage, searcher: FlagSearch
     if flag := searcher.search_flag(result):
         return flag
 
-    raise MumbleException(f"flag not found: exploit(0)")
+    raise MumbleException(f"exploit(0): flag not found")
     
 
 @checker.putflag(1)
@@ -480,7 +480,7 @@ async def getflag_private(
     try:
         directory, filename, identity = await db.get("privatedata")
     except KeyError:
-        raise MumbleException("Missing entry: getflag(1)")
+        raise MumbleException("getflag(1): Missing db entry")
 
     await conn.reader.readuntil(b"$ ")
 
@@ -507,7 +507,7 @@ async def getflag_private(
 
     # Check if the flag is in the file
     if not f"{task.flag}".encode() in data:
-        raise MumbleException("Flag not found: getflag(1)")
+        raise MumbleException("getflag(1): Flag not found")
 
     # Exit!
     conn.writer.write(f"dock\n".encode())
@@ -534,7 +534,7 @@ async def exploit_private(task: ExploitCheckerTaskMessage, searcher: FlagSearche
         if flag := searcher.search_flag(response):
             return flag
 
-    raise MumbleException("flag not found: exploit(1)")
+    raise MumbleException("exploit(1): flag not found")
 
 if __name__ == "__main__":
     checker.run()
