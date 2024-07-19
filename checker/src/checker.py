@@ -524,11 +524,8 @@ async def exploit_private(task: ExploitCheckerTaskMessage, searcher: FlagSearche
     matching_identities = exploit2.get_matching_identites(potential_identities, private_file)
         
     # Use ThreadPoolExecutor to parallelize the process_identity function
-    with ThreadPoolExecutor(max_workers=20) as executor:
-        responses = executor.map(lambda identity: exploit2.process_identity(identity, private_file, private_dir, task.address, SERVICE_PORT), matching_identities)
-
-    # Iterate over the responses to find the flag
-    for response in responses:
+    tasks = [exploit2.process_identity_async(identity, private_file, private_dir, task.address, SERVICE_PORT) for identity in matching_identities]
+    for response in await asyncio.gather(*tasks):
         if flag := searcher.search_flag(response):
             return flag
 
