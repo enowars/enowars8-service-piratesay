@@ -2,6 +2,7 @@
 services:
   piratesay:
     container_name: piratesay
+    restart: unless-stopped # This specifies that the container should always restart unless explicitly stopped
     build: .
     # The code should be copied into the container using COPY.
     # Mount the data folder writable, so that information can be persisted across restarts.

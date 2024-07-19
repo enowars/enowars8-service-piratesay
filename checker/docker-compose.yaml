@@ -2,6 +2,7 @@
 
 services:
   piratesay-checker:
+    restart: unless-stopped # This specifies that the container should always restart unless explicitly stopped
     build: .
     # The checker runs a HTTP interfaces, so we need to map port 3031 to the outside (port 8000).
     ports:
@@ -23,6 +24,7 @@ services:
         hard: 4000
   # The python checkerlib requires a mongo db!
   piratesay-mongo:
+    restart: unless-stopped # This specifies that the container should always restart unless explicitly stopped
     image: mongo
     #ports:
     #  - 27017:27017
