@@ -1,0 +1,41 @@
+# Use a suitable base-image.
+FROM ubuntu:22.04
+
+# Install necessary packages
+RUN apt-get update && apt-get install -y gcc python3 python3-pip make gdb cron libssl-dev file curl
+RUN pip3 install pwntools
+
+
+# Install GEF for GDB
+RUN bash -c "$(curl -fsSL https://gef.blah.cat/sh)"
+
+# Create a separate user and chown new directories if necessary
+RUN addgroup --system service
+RUN adduser --system --ingroup service --uid 1000 service
+
+# Create our mapped data volume endpoint
+RUN mkdir /data/
+
+# Copy our entrypoint.sh and make it executable
+COPY entrypoint.sh /
+RUN chmod +x /entrypoint.sh
+
+# Copy the deletion script and make it executable
+COPY delete_old_files.sh /
+RUN chmod +x /delete_old_files.sh
+
+# Copy the directory creation script and make it executable
+COPY create_directories.sh /
+RUN chmod +x /create_directories.sh
+
+# Set up the cron job using an absolute path
+RUN echo "* * * * * service /delete_old_files.sh" >> /etc/crontab
+
+# Copy our service (using 'src' here because the reference to splash_screen.txt is hardcoded, so needs to be same as the original)
+COPY src/ /src/
+
+# Expose the service's port
+EXPOSE 4444
+
+# Run the service
+ENTRYPOINT ["/entrypoint.sh"]

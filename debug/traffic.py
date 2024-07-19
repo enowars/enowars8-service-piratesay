@@ -1,3 +1,5 @@
+''' Simulate traffic to the server '''
+
 import socket
 import sys
 from concurrent.futures import ThreadPoolExecutor
