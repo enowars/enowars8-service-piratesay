@@ -2,8 +2,6 @@ import asyncio
 import random
 import re
 import string
-import threading
-import time
 from asyncio import StreamReader, StreamWriter
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timedelta
@@ -523,7 +521,7 @@ async def exploit_private(task: ExploitCheckerTaskMessage, searcher: FlagSearche
     potential_identities = exploit2.get_potential_identites(seed, current_identity)
     matching_identities = exploit2.get_matching_identites(potential_identities, private_file)
         
-    # Use ThreadPoolExecutor to parallelize the process_identity function
+    # Parallelize the processing of the matching identities
     tasks = [exploit2.process_identity_async(identity, private_file, private_dir, task.address, SERVICE_PORT) for identity in matching_identities]
     for response in await asyncio.gather(*tasks):
         if flag := searcher.search_flag(response):
