@@ -170,7 +170,11 @@ class Connection:
         await self.writer.drain()
         await self.reader.readuntil(b"$ ")
 
-        identity = data.decode().split("Pirate Identity: ")[1].split("\n")[0]
+        try:
+            identity = data.decode().split("Pirate Identity: ")[1].split("\n")[0]
+        except:
+            raise MumbleException("Unable to decode identity of user")
+
         return identity
 
 
@@ -509,7 +513,10 @@ async def getflag_private(
     await conn.reader.readuntil(b": ")
     conn.writer.write(f"{identity}\n".encode())
     await conn.writer.drain()
-    await conn.reader.readuntil(b"$ ")
+    identity_update = await conn.reader.readuntil(b"$ ")
+
+    if "Pirate identity updated" not in identity_update.decode():
+        raise MumbleException("getflag(1): Trying to set identity failed")
 
     # Go to the directory
     conn.writer.write(f"sail {directory}\n".encode())
